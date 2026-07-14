@@ -447,7 +447,7 @@ function TagBadge({ label, color }: { label: string; color: "blue" | "purple" })
   )
 }
 
-function PipelineStepCircle({ status }: { status: "completed" | "current" | "pending" }) {
+function PipelineStepCircle({ status }: { status: "completed" | "current" | "pending" | "rejected" }) {
   if (status === "completed") {
     return (
       <div className="flex items-center justify-center p-1 rounded-full bg-[#C9F0D6]">
@@ -469,9 +469,10 @@ function PipelineStepCircle({ status }: { status: "completed" | "current" | "pen
   )
 }
 
-function stepLabelColor(status: "completed" | "current" | "pending") {
+function stepLabelColor(status: "completed" | "current" | "pending" | "rejected") {
   if (status === "completed") return "#008744"
   if (status === "current") return "#0063EA"
+  if (status === "rejected") return "#DC2626"
   return "#525C4E"
 }
 

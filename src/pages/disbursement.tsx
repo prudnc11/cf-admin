@@ -20,7 +20,7 @@ import {
 } from "@tabler/icons-react"
 
 import { requests as procurementRequests } from "./procurement-request"
-import type { RequestCard } from "./procurement-request"
+import type { RequestCard, PipelineStep } from "./procurement-request"
 import { ProcurementRequestDetailPage } from "./procurement-request-detail"
 
 // --- Types ---

@@ -11,7 +11,6 @@ import {
   IconUsers,
   IconCash,
   IconRefresh,
-  IconPackage,
 } from "@tabler/icons-react"
 
 type Notification = {

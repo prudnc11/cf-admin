@@ -13,7 +13,6 @@ import {
   IconClock,
   IconCash,
   IconBuildingWarehouse,
-  IconFileText,
   IconNotes,
   IconCheck,
   IconX,
