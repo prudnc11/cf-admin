@@ -20,6 +20,12 @@ import {
   IconCopy,
   IconMail,
   IconRefreshAlert,
+  IconCircleCheckFilled,
+  IconClockHour4,
+  IconInfoCircle,
+  IconUserOff,
+  IconLock,
+  IconCircleXFilled,
 } from "@tabler/icons-react"
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@/components/ui/modal"
 import { Button } from "@/components/ui/button"
@@ -51,13 +57,13 @@ const tierConfig: Record<AggregatorTier, { bg: string; text: string }> = {
   BRONZE: { bg: "#D5E6FD", text: "#00439E" },
 }
 
-const statusConfig: Record<AggregatorStatus, { dot: string; text: string }> = {
-  Active: { dot: "#008744", text: "#008744" },
-  Pending: { dot: "#0063EA", text: "#0063EA" },
-  Suspended: { dot: "#BA1A1A", text: "#BA1A1A" },
-  "Pending suspension": { dot: "#995917", text: "#995917" },
-  Deactivated: { dot: "#525C4E", text: "#525C4E" },
-  Expired: { dot: "#525C4E", text: "#525C4E" },
+const statusConfig: Record<AggregatorStatus, { icon: React.ElementType; text: string }> = {
+  Active: { icon: IconCircleCheckFilled, text: "#008744" },
+  Pending: { icon: IconClockHour4, text: "#0063EA" },
+  Suspended: { icon: IconCircleXFilled, text: "#BA1A1A" },
+  "Pending suspension": { icon: IconLock, text: "#995917" },
+  Deactivated: { icon: IconUserOff, text: "#525C4E" },
+  Expired: { icon: IconInfoCircle, text: "#525C4E" },
 }
 
 const countryFlags: Record<string, string> = {
@@ -115,9 +121,10 @@ function TierBadge({ tier }: { tier: AggregatorTier }) {
 
 function StatusBadge({ status }: { status: AggregatorStatus }) {
   const c = statusConfig[status]
+  const Icon = c.icon
   return (
-    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[6px] bg-white outline outline-1 outline-[#E5E8DF]">
-      <span className="size-3 rounded-full" style={{ background: c.dot }} />
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[6px] bg-white overflow-hidden outline outline-1 outline-[#E5E8DF]">
+      <Icon className="size-3" style={{ color: c.text }} />
       <span className="text-[12px] leading-[18px]" style={{ color: c.text }}>{status}</span>
     </span>
   )
