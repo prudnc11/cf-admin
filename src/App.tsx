@@ -16,6 +16,7 @@ import { OperationsOverviewPage } from "@/pages/operations-overview"
 import { InventoryOverviewPage } from "@/pages/inventory-overview"
 import { StockAlertsPage } from "@/pages/stock-alerts"
 import { DiscrepanciesPage } from "@/pages/discrepancies"
+import { MovementLogsPage } from "@/pages/movement-logs"
 import { NotificationSheet } from "@/components/notification-sheet"
 
 const PAGES_WITHOUT_SUBHEADER = ["All requests"]
@@ -86,7 +87,7 @@ function App() {
                     Log Discrepancy
                   </Button>
                 )}
-                {activeItem !== "Procurement Request" && activeItem !== "Disbursement" && activeItem !== "Stock alerts" && activeItem !== "Discrepancies" && (
+                {activeItem !== "Procurement Request" && activeItem !== "Disbursement" && activeItem !== "Stock alerts" && activeItem !== "Discrepancies" && activeItem !== "Movements Logs" && (
                   <Button variant="primary" size="sm">
                     <IconPlus className="size-4" />
                     Create Plan
@@ -104,6 +105,7 @@ function App() {
             {activeItem === "Inventory Overview" && <InventoryOverviewPage />}
             {activeItem === "Stock alerts" && <StockAlertsPage />}
             {activeItem === "Discrepancies" && <DiscrepanciesPage />}
+            {activeItem === "Movements Logs" && <MovementLogsPage />}
           </main>
         </SidebarInset>
         <NotificationSheet open={notifOpen} onClose={() => setNotifOpen(false)} />
