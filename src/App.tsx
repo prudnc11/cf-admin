@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { IconSearch, IconBell, IconRefresh, IconDownload, IconPlus } from "@tabler/icons-react"
+import { IconSearch, IconBell, IconRefresh, IconDownload, IconPlus, IconAdjustments } from "@tabler/icons-react"
 import { Button } from "@/components/ui/button"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import {
@@ -14,6 +14,8 @@ import { ProcurementRequestPage } from "@/pages/procurement-request"
 import { DisbursementPage } from "@/pages/disbursement"
 import { OperationsOverviewPage } from "@/pages/operations-overview"
 import { InventoryOverviewPage } from "@/pages/inventory-overview"
+import { StockAlertsPage } from "@/pages/stock-alerts"
+import { DiscrepanciesPage } from "@/pages/discrepancies"
 import { NotificationSheet } from "@/components/notification-sheet"
 
 const PAGES_WITHOUT_SUBHEADER = ["All requests"]
@@ -72,7 +74,19 @@ function App() {
                   <IconDownload className="size-4" />
                   Export
                 </Button>
-                {activeItem !== "Procurement Request" && activeItem !== "Disbursement" && (
+                {activeItem === "Stock alerts" && (
+                  <Button variant="primary" size="sm">
+                    <IconAdjustments className="size-4" />
+                    Threshold setting
+                  </Button>
+                )}
+                {activeItem === "Discrepancies" && (
+                  <Button variant="primary" size="sm">
+                    <IconPlus className="size-4" />
+                    Log Discrepancy
+                  </Button>
+                )}
+                {activeItem !== "Procurement Request" && activeItem !== "Disbursement" && activeItem !== "Stock alerts" && activeItem !== "Discrepancies" && (
                   <Button variant="primary" size="sm">
                     <IconPlus className="size-4" />
                     Create Plan
@@ -88,6 +102,8 @@ function App() {
             {activeItem === "Disbursement" && <DisbursementPage onDetailViewChange={setIsDetailView} initialTab={initialTab} />}
             {activeItem === "Overview" && <OperationsOverviewPage />}
             {activeItem === "Inventory Overview" && <InventoryOverviewPage />}
+            {activeItem === "Stock alerts" && <StockAlertsPage />}
+            {activeItem === "Discrepancies" && <DiscrepanciesPage />}
           </main>
         </SidebarInset>
         <NotificationSheet open={notifOpen} onClose={() => setNotifOpen(false)} />
