@@ -21,6 +21,22 @@ import {
   IconCheck,
   IconClock,
 } from "@tabler/icons-react"
+import { useToast } from "@/hooks/use-toast"
+import { Toast } from "@/components/ui/toast"
+import { ScheduleVisitForm } from "@/components/forms/schedule-visit-form"
+import { LogFieldQAForm } from "@/components/forms/log-field-qa-form"
+import { ApprovalForm } from "@/components/forms/approval-form"
+import { RejectionForm } from "@/components/forms/rejection-form"
+import { FinanceApproveForm } from "@/components/forms/finance-approve-form"
+import { FinanceRejectForm } from "@/components/forms/finance-reject-form"
+import { AttachProofForm } from "@/components/forms/attach-proof-form"
+import { FinanceSignoffForm } from "@/components/forms/finance-signoff-form"
+import { ConfirmPickupForm } from "@/components/forms/confirm-pickup-form"
+import { LogWarehouseQAForm } from "@/components/forms/log-warehouse-qa-form"
+import { GenerateGRNForm } from "@/components/forms/generate-grn-form"
+import { StartRoutingForm } from "@/components/forms/start-routing-form"
+
+export type ModalType = "schedule-visit" | "log-field-qa" | "approve" | "reject" | "finance-approve" | "finance-reject" | "attach-proof" | "finance-signoff" | "confirm-pickup" | "log-warehouse-qa" | "generate-grn" | "start-routing"
 
 // --- Data ---
 
@@ -505,18 +521,18 @@ function PipelineStepper({ steps }: { steps: PipelineStep[] }) {
   )
 }
 
-function StageActions({ stage, onOpen }: { stage?: string; onOpen: () => void }) {
+function StageActions({ stage, onAction }: { stage?: string; onAction?: (type: ModalType) => void }) {
   if (!stage) return null
 
-  const actionMap: Record<string, { primary?: { label: string }; secondary?: { label: string } }> = {
-    "schedule": { primary: { label: "Schedule Visit" } },
-    "field-qa": { primary: { label: "Log Field QA" } },
-    "approval": { primary: { label: "Approve" }, secondary: { label: "Reject" } },
-    "finance": { primary: { label: "Approve Disbursement" }, secondary: { label: "Reject" } },
-    "pickup": { primary: { label: "Confirm Pickup" } },
-    "warehouse-qa": { primary: { label: "Log Warehouse QA" } },
-    "grn": { primary: { label: "Generate GRN" } },
-    "routing": { primary: { label: "Start Routing" } },
+  const actionMap: Record<string, { primary?: { label: string; modal: ModalType }; secondary?: { label: string; modal: ModalType } }> = {
+    "schedule": { primary: { label: "Schedule Visit", modal: "schedule-visit" } },
+    "field-qa": { primary: { label: "Log Field QA", modal: "log-field-qa" } },
+    "approval": { primary: { label: "Approve", modal: "approve" }, secondary: { label: "Reject", modal: "reject" } },
+    "finance": { primary: { label: "Approve Disbursement", modal: "finance-approve" }, secondary: { label: "Reject", modal: "finance-reject" } },
+    "pickup": { primary: { label: "Confirm Pickup", modal: "confirm-pickup" } },
+    "warehouse-qa": { primary: { label: "Log Warehouse QA", modal: "log-warehouse-qa" } },
+    "grn": { primary: { label: "Generate GRN", modal: "generate-grn" } },
+    "routing": { primary: { label: "Start Routing", modal: "start-routing" } },
   }
 
   const actions = actionMap[stage]
@@ -526,7 +542,7 @@ function StageActions({ stage, onOpen }: { stage?: string; onOpen: () => void })
     <div className="flex items-center gap-2">
       {actions.secondary && (
         <button
-          onClick={(e) => { e.stopPropagation() }}
+          onClick={(e) => { e.stopPropagation(); onAction?.(actions.secondary!.modal) }}
           className="flex items-center gap-1.5 h-8 px-3 rounded-lg outline outline-1 outline-[#BA1A1A] text-[#BA1A1A] text-[13px] leading-[18px] font-bold hover:bg-[#FEE2E2] transition-colors"
         >
           {actions.secondary.label}
@@ -534,7 +550,7 @@ function StageActions({ stage, onOpen }: { stage?: string; onOpen: () => void })
       )}
       {actions.primary && (
         <button
-          onClick={(e) => { e.stopPropagation(); onOpen() }}
+          onClick={(e) => { e.stopPropagation(); onAction?.(actions.primary!.modal) }}
           className="flex items-center gap-1.5 h-8 px-3 rounded-lg bg-[#36B92E] text-white text-[13px] leading-[18px] font-bold hover:bg-[#5EC758] transition-colors"
         >
           {actions.primary.label}
@@ -545,7 +561,7 @@ function StageActions({ stage, onOpen }: { stage?: string; onOpen: () => void })
   )
 }
 
-function RequestCardComponent({ request, onOpen }: { request: RequestCard; onOpen: () => void }) {
+function RequestCardComponent({ request, onOpen, onAction }: { request: RequestCard; onOpen: () => void; onAction?: (type: ModalType) => void }) {
   const [expanded, setExpanded] = useState(false)
   return (
     <div className="p-4 rounded-[12px] shadow-sm outline outline-1 outline-[#E5E8DF] flex flex-col gap-2 cursor-pointer hover:outline-[#36B92E] transition-colors" onClick={onOpen}>
@@ -604,7 +620,7 @@ function RequestCardComponent({ request, onOpen }: { request: RequestCard; onOpe
                 </span>
               )}
             </div>
-            <StageActions stage={request.currentStage} onOpen={onOpen} />
+            <StageActions stage={request.currentStage} onAction={onAction} />
           </div>
         </>
       )}
@@ -614,11 +630,14 @@ function RequestCardComponent({ request, onOpen }: { request: RequestCard; onOpe
 
 // --- Main Page ---
 
-export function ProcurementRequestPage({ onDetailViewChange }: { onDetailViewChange?: (isDetail: boolean) => void }) {
-  const [activeTab, setActiveTab] = useState("All Requests")
+export function ProcurementRequestPage({ onDetailViewChange, initialTab }: { onDetailViewChange?: (isDetail: boolean) => void; initialTab?: string }) {
+  const [activeTab, setActiveTab] = useState(initialTab || "All Requests")
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [currentPage, setCurrentPage] = useState(1)
   const [selectedRequest, setSelectedRequest] = useState<number | null>(null)
+  const [localRequests] = useState<RequestCard[]>(() => [...requests])
+  const [activeModal, setActiveModal] = useState<{ type: ModalType; requestIndex: number } | null>(null)
+  const { toast, showToast, dismissToast } = useToast()
 
   const openDetail = (index: number) => {
     setSelectedRequest(index)
@@ -630,10 +649,23 @@ export function ProcurementRequestPage({ onDetailViewChange }: { onDetailViewCha
     onDetailViewChange?.(false)
   }
 
+  const handleAction = (type: ModalType, index: number) => {
+    setActiveModal({ type, requestIndex: index })
+  }
+
+  const closeModal = () => setActiveModal(null)
+
+  const getActiveRequest = () => activeModal ? localRequests[activeModal.requestIndex] : null
+
+  const handleFormSubmit = (message: string) => {
+    showToast(message)
+    closeModal()
+  }
+
   // Filter by tab
   const filteredRequests = activeTab === "All Requests"
-    ? requests
-    : requests.filter((r) => r.tabCategory === activeTab)
+    ? localRequests
+    : localRequests.filter((r) => r.tabCategory === activeTab)
 
   // Paginate
   const totalPages = Math.max(1, Math.ceil(filteredRequests.length / rowsPerPage))
@@ -641,9 +673,109 @@ export function ProcurementRequestPage({ onDetailViewChange }: { onDetailViewCha
   const startIdx = (safePage - 1) * rowsPerPage
   const paginatedRequests = filteredRequests.slice(startIdx, startIdx + rowsPerPage)
 
+  // Map filtered index to global index for modal actions
+  const getGlobalIndex = (filteredIdx: number) => {
+    const req = filteredRequests[filteredIdx]
+    return localRequests.indexOf(req)
+  }
+
   if (selectedRequest !== null) {
     const req = filteredRequests[selectedRequest]
-    return <ProcurementRequestDetailPage onBack={closeDetail} request={req} />
+    const globalIdx = getGlobalIndex(selectedRequest)
+    return (
+      <>
+        <ProcurementRequestDetailPage
+          onBack={closeDetail}
+          request={req}
+          onAction={(type) => handleAction(type, globalIdx)}
+        />
+        {renderModals()}
+      </>
+    )
+  }
+
+  function renderModals() {
+    const activeReq = getActiveRequest()
+    if (!activeReq) return null
+    const reqId = activeReq.requestId
+
+    return (
+      <>
+        <ScheduleVisitForm
+          open={activeModal?.type === "schedule-visit"}
+          onOpenChange={(o) => !o && closeModal()}
+          request={activeReq}
+          onSubmit={() => handleFormSubmit(`Field visit scheduled for ${reqId} successfully`)}
+        />
+        <LogFieldQAForm
+          open={activeModal?.type === "log-field-qa"}
+          onOpenChange={(o) => !o && closeModal()}
+          request={activeReq}
+          onSubmit={() => handleFormSubmit(`Field QA logged for ${reqId} successfully`)}
+        />
+        <ApprovalForm
+          open={activeModal?.type === "approve"}
+          onOpenChange={(o) => !o && closeModal()}
+          request={activeReq}
+          onSubmit={() => handleFormSubmit(`${reqId} approved successfully`)}
+        />
+        <RejectionForm
+          open={activeModal?.type === "reject"}
+          onOpenChange={(o) => !o && closeModal()}
+          request={activeReq}
+          title="Reject Aggregation Request"
+          onSubmit={() => handleFormSubmit(`${reqId} rejected`)}
+        />
+        <FinanceApproveForm
+          open={activeModal?.type === "finance-approve"}
+          onOpenChange={(o) => !o && closeModal()}
+          request={activeReq}
+          onSubmit={() => handleFormSubmit(`Disbursement approved for ${reqId} successfully`)}
+        />
+        <FinanceRejectForm
+          open={activeModal?.type === "finance-reject"}
+          onOpenChange={(o) => !o && closeModal()}
+          request={activeReq}
+          onSubmit={() => handleFormSubmit(`Disbursement rejected for ${reqId}`)}
+        />
+        <AttachProofForm
+          open={activeModal?.type === "attach-proof"}
+          onOpenChange={(o) => !o && closeModal()}
+          request={activeReq}
+          onSubmit={() => handleFormSubmit(`Proof attached for ${reqId} successfully`)}
+        />
+        <FinanceSignoffForm
+          open={activeModal?.type === "finance-signoff"}
+          onOpenChange={(o) => !o && closeModal()}
+          request={activeReq}
+          onSubmit={() => handleFormSubmit(`Sign-Off for ${reqId} completed & Supply chain notified successfully`)}
+        />
+        <ConfirmPickupForm
+          open={activeModal?.type === "confirm-pickup"}
+          onOpenChange={(o) => !o && closeModal()}
+          request={activeReq}
+          onSubmit={() => handleFormSubmit(`Pickup confirmed for ${reqId} successfully`)}
+        />
+        <LogWarehouseQAForm
+          open={activeModal?.type === "log-warehouse-qa"}
+          onOpenChange={(o) => !o && closeModal()}
+          request={activeReq}
+          onSubmit={() => handleFormSubmit(`Warehouse QA logged for ${reqId} successfully`)}
+        />
+        <GenerateGRNForm
+          open={activeModal?.type === "generate-grn"}
+          onOpenChange={(o) => !o && closeModal()}
+          request={activeReq}
+          onSubmit={() => handleFormSubmit(`GRN generated for ${reqId} successfully`)}
+        />
+        <StartRoutingForm
+          open={activeModal?.type === "start-routing"}
+          onOpenChange={(o) => !o && closeModal()}
+          request={activeReq}
+          onSubmit={() => handleFormSubmit(`Routing started for ${reqId} successfully`)}
+        />
+      </>
+    )
   }
 
   return (
@@ -717,7 +849,7 @@ export function ProcurementRequestPage({ onDetailViewChange }: { onDetailViewCha
       {/* Request Cards */}
       <div className="flex flex-col gap-3">
         {paginatedRequests.map((req, i) => (
-          <RequestCardComponent key={startIdx + i} request={req} onOpen={() => openDetail(startIdx + i)} />
+          <RequestCardComponent key={startIdx + i} request={req} onOpen={() => openDetail(startIdx + i)} onAction={(type) => handleAction(type, getGlobalIndex(startIdx + i))} />
         ))}
       </div>
 
@@ -779,6 +911,12 @@ export function ProcurementRequestPage({ onDetailViewChange }: { onDetailViewCha
           </div>
         </div>
       </div>
+
+      {/* Toast */}
+      {toast && <Toast message={toast} onDismiss={dismissToast} />}
+
+      {/* Modals */}
+      {renderModals()}
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { useState, Fragment } from "react"
-import type { RequestCard, PipelineStep, DetailState } from "./procurement-request"
+import type { RequestCard, PipelineStep, DetailState, ModalType } from "./procurement-request"
 import {
   IconCheck,
   IconChevronUp,
@@ -290,7 +290,7 @@ function ApprovalSection({ state }: { state: DetailState }) {
   )
 }
 
-function FinanceSection({ state, effectiveState, interactive, onAction }: { state: DetailState; effectiveState?: DetailState["financeSignoff"]; interactive?: boolean; onAction?: (action: string) => void }) {
+function FinanceSection({ state, effectiveState, interactive, onAction }: { state: DetailState; effectiveState?: DetailState["financeSignoff"]; interactive?: boolean; onAction?: (action: string | ModalType) => void }) {
   const financeState = effectiveState ?? state.financeSignoff
   if (financeState === "pending") return <CollapsibleSection title="Finance Sign-off" defaultOpen={false}><PendingSection label="Awaiting approval" /></CollapsibleSection>
 
@@ -319,11 +319,11 @@ function FinanceSection({ state, effectiveState, interactive, onAction }: { stat
           </div>
           {interactive && (
             <div className="flex items-center gap-2">
-              <button onClick={() => onAction?.("approve")} className="flex items-center gap-2 h-9 px-3 rounded-full bg-[#36B92E] text-white text-[14px] leading-[20px] font-bold hover:bg-[#5EC758] transition-colors">
+              <button onClick={() => onAction?.("finance-approve")} className="flex items-center gap-2 h-9 px-3 rounded-full bg-[#36B92E] text-white text-[14px] leading-[20px] font-bold hover:bg-[#5EC758] transition-colors">
                 <IconCheck className="size-4" />
                 Approve Disbursement
               </button>
-              <button onClick={() => onAction?.("reject")} className="flex items-center gap-2 h-9 px-3 rounded-full bg-[#FFDAD6] text-[#8F0004] text-[14px] leading-[20px] font-bold hover:bg-[#FFCCC7] transition-colors">
+              <button onClick={() => onAction?.("finance-reject")} className="flex items-center gap-2 h-9 px-3 rounded-full bg-[#FFDAD6] text-[#8F0004] text-[14px] leading-[20px] font-bold hover:bg-[#FFCCC7] transition-colors">
                 <IconX className="size-4" />
                 Reject
               </button>
@@ -352,7 +352,7 @@ function FinanceSection({ state, effectiveState, interactive, onAction }: { stat
           <div className="flex-1 px-2 py-1 bg-[#F7FAF6] rounded-[6px]">
             <span className="text-[12px] leading-[18px] font-normal text-[#525C4E]">Awaiting proof of disbursement</span>
           </div>
-          <button onClick={interactive ? () => onAction?.("attach-proof") : undefined} className="inline-flex items-center gap-2 h-9 px-3 bg-[#EDF0E6] rounded-full text-[14px] leading-[20px] font-bold text-[#1A5514]">
+          <button onClick={interactive ? () => onAction?.("attach-proof" as ModalType) : undefined} className="inline-flex items-center gap-2 h-9 px-3 bg-[#EDF0E6] rounded-full text-[14px] leading-[20px] font-bold text-[#1A5514]">
             <IconUpload className="size-4" />
             Attach Proof of Disbursement
           </button>
@@ -396,7 +396,7 @@ function FinanceSection({ state, effectiveState, interactive, onAction }: { stat
             <span className="text-[12px] leading-[18px] font-normal text-[#525C4E]">Awaiting Sign-Off</span>
           </div>
           {interactive && (
-            <button onClick={() => onAction?.("sign-off")} className="inline-flex items-center gap-2 h-9 px-3 bg-[#EDF0E6] rounded-full text-[14px] leading-[20px] font-bold text-[#1A5514]">
+            <button onClick={() => onAction?.("finance-signoff")} className="inline-flex items-center gap-2 h-9 px-3 bg-[#EDF0E6] rounded-full text-[14px] leading-[20px] font-bold text-[#1A5514]">
               <IconDownload className="size-4" />
               Sign Off
             </button>
@@ -582,7 +582,7 @@ function getEffectivePipeline(steps: PipelineStep[], financeState: DetailState["
   })
 }
 
-export function ProcurementRequestDetailPage({ onBack, request, context = "procurement" }: { onBack: () => void; request: RequestCard; context?: "procurement" | "disbursement" }) {
+export function ProcurementRequestDetailPage({ onBack, request, context = "procurement", onAction }: { onBack: () => void; request: RequestCard; context?: "procurement" | "disbursement"; onAction?: (type: ModalType) => void }) {
   const [activeTab, setActiveTab] = useState("Request details")
   const ds = request.detailState
   const action = getActionButton(ds)
@@ -604,6 +604,15 @@ export function ProcurementRequestDetailPage({ onBack, request, context = "procu
   }
 
   const handleFinanceAction = (actionType: string) => {
+    // If onAction is provided (modal-based flow), delegate to it
+    if (onAction) {
+      const modalTypes: ModalType[] = ["finance-approve", "finance-reject", "attach-proof", "finance-signoff"]
+      if (modalTypes.includes(actionType as ModalType)) {
+        onAction(actionType as ModalType)
+        return
+      }
+    }
+    // Fallback inline state changes (legacy)
     if (actionType === "approve") {
       setLocalFinanceState("pending-proof")
     } else if (actionType === "reject") {
@@ -642,24 +651,24 @@ export function ProcurementRequestDetailPage({ onBack, request, context = "procu
           <div className="flex items-center gap-3">
             {effectiveFinanceState === "awaiting-review" && (
               <>
-                <button onClick={() => handleFinanceAction("approve")} className="flex items-center gap-2 h-9 px-3 rounded-lg bg-[#36B92E] text-white text-[14px] leading-[20px] font-bold hover:bg-[#5EC758] transition-colors">
+                <button onClick={() => onAction?.("finance-approve")} className="flex items-center gap-2 h-9 px-3 rounded-lg bg-[#36B92E] text-white text-[14px] leading-[20px] font-bold hover:bg-[#5EC758] transition-colors">
                   <IconCheck className="size-4" />
                   Approve Disbursement
                 </button>
-                <button onClick={() => handleFinanceAction("reject")} className="flex items-center gap-2 h-9 px-3 rounded-lg bg-[#FFDAD6] text-[#8F0004] text-[14px] leading-[20px] font-bold hover:bg-[#FFCCC7] transition-colors">
+                <button onClick={() => onAction?.("finance-reject")} className="flex items-center gap-2 h-9 px-3 rounded-lg bg-[#FFDAD6] text-[#8F0004] text-[14px] leading-[20px] font-bold hover:bg-[#FFCCC7] transition-colors">
                   <IconX className="size-4" />
                   Reject
                 </button>
               </>
             )}
             {effectiveFinanceState === "pending-proof" && (
-              <button onClick={() => handleFinanceAction("attach-proof")} className="flex items-center gap-2 h-9 px-4 rounded-lg bg-[#36B92E] text-white text-[14px] leading-[20px] font-bold hover:bg-[#5EC758] transition-colors">
+              <button onClick={() => onAction?.("attach-proof")} className="flex items-center gap-2 h-9 px-4 rounded-lg bg-[#36B92E] text-white text-[14px] leading-[20px] font-bold hover:bg-[#5EC758] transition-colors">
                 <IconCheck className="size-4" />
                 Attach Proof of Disbursement
               </button>
             )}
             {effectiveFinanceState === "awaiting-signoff" && (
-              <button onClick={() => handleFinanceAction("sign-off")} className="flex items-center gap-2 h-9 px-4 rounded-lg outline outline-1 outline-[#E5E8DF] text-[#161D14] text-[14px] leading-[20px] font-bold hover:bg-[#F7FAF6] transition-colors">
+              <button onClick={() => onAction?.("finance-signoff")} className="flex items-center gap-2 h-9 px-4 rounded-lg outline outline-1 outline-[#E5E8DF] text-[#161D14] text-[14px] leading-[20px] font-bold hover:bg-[#F7FAF6] transition-colors">
                 <IconDownload className="size-4" />
                 Sign Off
               </button>
@@ -673,7 +682,24 @@ export function ProcurementRequestDetailPage({ onBack, request, context = "procu
           </div>
         ) : (
           action && (
-            <button className="flex items-center gap-2 h-9 px-4 rounded-lg bg-[#36B92E] text-white text-[14px] leading-[20px] font-bold hover:bg-[#5EC758] transition-colors">
+            <button
+              onClick={() => {
+                const stageToModal: Record<string, ModalType> = {
+                  "Schedule Visit": "schedule-visit",
+                  "Log Field QA": "log-field-qa",
+                  "Approve": "approve",
+                  "Approve Disbursement": "finance-approve",
+                  "Attach Proof": "attach-proof",
+                  "Confirm Pickup": "confirm-pickup",
+                  "Log Warehouse QA": "log-warehouse-qa",
+                  "Generate GRN": "generate-grn",
+                  "Start Routing": "start-routing",
+                }
+                const modalType = stageToModal[action.label]
+                if (modalType && onAction) onAction(modalType)
+              }}
+              className="flex items-center gap-2 h-9 px-4 rounded-lg bg-[#36B92E] text-white text-[14px] leading-[20px] font-bold hover:bg-[#5EC758] transition-colors"
+            >
               <action.Icon className="size-4" />
               {action.label}
             </button>

@@ -60,6 +60,7 @@ const menuItems: MenuItem[] = [
     items: [
       { title: "Overview" },
       { title: "Aggregation Planning" },
+      { title: "Procurement Request" },
       { title: "Inventory Overview" },
       { title: "Stock alerts" },
       { title: "Discrepancies" },

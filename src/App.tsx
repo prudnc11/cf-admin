@@ -12,6 +12,8 @@ import { DashboardPage } from "@/pages/dashboard"
 import { AllRequestsPage } from "@/pages/all-requests"
 import { ProcurementRequestPage } from "@/pages/procurement-request"
 import { DisbursementPage } from "@/pages/disbursement"
+import { OperationsOverviewPage } from "@/pages/operations-overview"
+import { InventoryOverviewPage } from "@/pages/inventory-overview"
 import { NotificationSheet } from "@/components/notification-sheet"
 
 const PAGES_WITHOUT_SUBHEADER = ["All requests"]
@@ -20,13 +22,20 @@ function App() {
   const [activeItem, setActiveItem] = useState("Dashboard")
   const [isDetailView, setIsDetailView] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
+  const [initialTab, setInitialTab] = useState<string | undefined>(undefined)
+
+  const navigateToPage = (page: string, tab?: string) => {
+    setActiveItem(page)
+    setInitialTab(tab)
+    setIsDetailView(false)
+  }
 
   const hideSubHeader = PAGES_WITHOUT_SUBHEADER.includes(activeItem) || ((activeItem === "Procurement Request" || activeItem === "Disbursement") && isDetailView)
 
   return (
     <TooltipProvider>
       <SidebarProvider>
-        <AppSidebar activeItem={activeItem} onNavigate={(item) => { setActiveItem(item); setIsDetailView(false) }} />
+        <AppSidebar activeItem={activeItem} onNavigate={(item) => { setActiveItem(item); setInitialTab(undefined); setIsDetailView(false) }} />
         <SidebarInset>
           <header className="flex h-[60px] items-center gap-3 border-b border-[#E5E8DF] pl-4 pr-10">
             <SidebarTrigger />
@@ -73,10 +82,12 @@ function App() {
             </div>
           )}
           <main className={`flex-1 pt-2 pb-6 overflow-auto ${activeItem === "All requests" ? "pl-0 pr-10" : "px-10"}`}>
-            {activeItem === "Dashboard" && <DashboardPage />}
+            {activeItem === "Dashboard" && <DashboardPage onNavigate={navigateToPage} />}
             {activeItem === "All requests" && <AllRequestsPage />}
-            {activeItem === "Procurement Request" && <ProcurementRequestPage onDetailViewChange={setIsDetailView} />}
-            {activeItem === "Disbursement" && <DisbursementPage onDetailViewChange={setIsDetailView} />}
+            {activeItem === "Procurement Request" && <ProcurementRequestPage onDetailViewChange={setIsDetailView} initialTab={initialTab} />}
+            {activeItem === "Disbursement" && <DisbursementPage onDetailViewChange={setIsDetailView} initialTab={initialTab} />}
+            {activeItem === "Overview" && <OperationsOverviewPage />}
+            {activeItem === "Inventory Overview" && <InventoryOverviewPage />}
           </main>
         </SidebarInset>
         <NotificationSheet open={notifOpen} onClose={() => setNotifOpen(false)} />

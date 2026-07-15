@@ -17,6 +17,7 @@ import {
   IconCheck,
   IconX,
 } from "@tabler/icons-react"
+import { requests } from "./procurement-request"
 
 const metricCards = [
   { label: "Active Aggregators", value: "112", iconBg: "#D5E6FD", iconColor: "#00439E", icon: IconUsersGroup },
@@ -31,59 +32,40 @@ const metricCards = [
 
 const pipelineSteps = ["Delivery Method", "Field QA", "Approval", "Finance", "Pickup", "Warehouse QA", "GRN", "Routing"]
 
-const pipelineCards = [
-  { label: "Awaiting Ops Approval", value: "GHS 1.26M", iconBg: "#D5E6FD", iconColor: "#00439E", icon: IconLoader },
-  { label: "Overdue", value: "7", iconBg: "#FEE2E2", iconColor: "#DC2626", icon: IconAlertTriangle },
-  { label: "Awaiting Finance Review", value: "28", iconBg: "#F3E8FD", iconColor: "#6B21A8", icon: IconClock },
-  { label: "Pending disbursement", value: "9", extra: "12 requests", iconBg: "#D4F5D0", iconColor: "#1A5514", icon: IconCash },
-  { label: "Awaiting Warehouse QA", value: "43", iconBg: "#D4F5D0", iconColor: "#1A5514", icon: IconBuildingWarehouse },
-  { label: "GRN / Routing Needed", value: "19", badge: "-20% this week", iconBg: "#D4F5D0", iconColor: "#1A5514", icon: IconNotes },
+// Compute real counts from procurement data
+const approvalCount = requests.filter((r) => r.currentStage === "approval").length
+const overdueCount = requests.filter((r) => r.tabCategory === "Overdue").length
+const financeReviewCount = requests.filter((r) => r.tabCategory === "Finance" && r.detailState.financeSignoff === "awaiting-review").length
+const pendingProofCount = requests.filter((r) => r.tabCategory === "Finance" && r.detailState.financeSignoff === "pending-proof").length
+const pendingProofRequests = requests.filter((r) => r.tabCategory === "Finance").length
+const warehouseQACount = requests.filter((r) => r.tabCategory === "Warehouse QA").length
+const grnRoutingCount = requests.filter((r) => r.tabCategory === "GRN").length
+
+type PipelineCardData = {
+  label: string
+  value: string
+  iconBg: string
+  iconColor: string
+  icon: typeof IconLoader
+  extra?: string
+  badge?: string
+  navigateTo: string
+  navigateTab?: string
+}
+
+const pipelineCards: PipelineCardData[] = [
+  { label: "Awaiting Ops Approval", value: String(approvalCount), iconBg: "#D5E6FD", iconColor: "#00439E", icon: IconLoader, navigateTo: "Procurement Request", navigateTab: "Field QA" },
+  { label: "Overdue", value: String(overdueCount), iconBg: "#FEE2E2", iconColor: "#DC2626", icon: IconAlertTriangle, navigateTo: "Procurement Request", navigateTab: "Overdue" },
+  { label: "Awaiting Finance Review", value: String(financeReviewCount), iconBg: "#F3E8FD", iconColor: "#6B21A8", icon: IconClock, navigateTo: "Disbursement", navigateTab: "Awaiting Review" },
+  { label: "Pending disbursement", value: String(pendingProofCount), extra: `${pendingProofRequests} requests`, iconBg: "#D4F5D0", iconColor: "#1A5514", icon: IconCash, navigateTo: "Disbursement", navigateTab: "Pending Proof" },
+  { label: "Awaiting Warehouse QA", value: String(warehouseQACount), iconBg: "#D4F5D0", iconColor: "#1A5514", icon: IconBuildingWarehouse, navigateTo: "Procurement Request", navigateTab: "Warehouse QA" },
+  { label: "GRN / Routing Needed", value: String(grnRoutingCount), iconBg: "#D4F5D0", iconColor: "#1A5514", icon: IconNotes, navigateTo: "Procurement Request", navigateTab: "GRN" },
 ]
 
-const pipelineActions = [
-  {
-    commodity: "{Commodity}",
-    requestId: "Sales-request-ID",
-    cooperative: "Tetteh Cooperative",
-    product: "Rice",
-    quantity: "38MT",
-    plan: "Plan PLAN-2026-002",
-    status: "Awaiting Schedule",
-    tag: "Field visit",
-    scheduledDate: "12 Jun 2026",
-    assignedTo: "Yaw",
-    confirmedBy: "Yaw Darko",
-    confirmedDate: "2026-06-14 11:00",
-  },
-  {
-    commodity: "{Commodity}",
-    requestId: "Sales-request-ID",
-    cooperative: "Tetteh Cooperative",
-    product: "Rice",
-    quantity: "38MT",
-    plan: "Plan PLAN-2026-002",
-    status: "Awaiting Schedule",
-    tag: "Field visit",
-    scheduledDate: "12 Jun 2026",
-    assignedTo: "Yaw",
-    confirmedBy: "Yaw Darko",
-    confirmedDate: "2026-06-14 11:00",
-  },
-  {
-    commodity: "{Commodity}",
-    requestId: "Sales-request-ID",
-    cooperative: "Tetteh Cooperative",
-    product: "Rice",
-    quantity: "38MT",
-    plan: "Plan PLAN-2026-002",
-    status: "Awaiting Schedule",
-    tag: "Field visit",
-    scheduledDate: "12 Jun 2026",
-    assignedTo: "Yaw",
-    confirmedBy: "Yaw Darko",
-    confirmedDate: "2026-06-14 11:00",
-  },
-]
+// Derive pipeline action items from real requests that need immediate action
+const pipelineActionRequests = requests
+  .filter((r) => r.currentStage && r.tabCategory !== "Rejected")
+  .slice(0, 3)
 
 const alerts = [
   {
@@ -132,10 +114,13 @@ function MetricCard({ card }: { card: typeof metricCards[number] }) {
   )
 }
 
-function PipelineCard({ card }: { card: typeof pipelineCards[number] }) {
+function PipelineCard({ card, onClick }: { card: PipelineCardData; onClick?: () => void }) {
   const Icon = card.icon
   return (
-    <div className="p-4 bg-white rounded-[12px] shadow-sm outline outline-1 outline-[#E5E8DF] flex flex-col gap-3">
+    <div
+      className="p-4 bg-white rounded-[12px] shadow-sm outline outline-1 outline-[#E5E8DF] flex flex-col gap-3 cursor-pointer hover:outline-[#36B92E] transition-colors"
+      onClick={onClick}
+    >
       <div className="flex items-center gap-2">
         <div className="p-1.5 rounded-md flex items-center" style={{ background: card.iconBg }}>
           <Icon className="size-4" style={{ color: card.iconColor }} />
@@ -156,41 +141,57 @@ function PipelineCard({ card }: { card: typeof pipelineCards[number] }) {
   )
 }
 
-function PipelineActionCard({ item }: { item: typeof pipelineActions[number] }) {
+function PipelineActionCard({ item, onClick }: { item: typeof requests[number]; onClick?: () => void }) {
   return (
-    <div className="p-4 rounded-[12px] shadow-sm outline outline-1 outline-[#E5E8DF] flex flex-col gap-2">
+    <div
+      className="p-4 rounded-[12px] shadow-sm outline outline-1 outline-[#E5E8DF] flex flex-col gap-2 cursor-pointer hover:outline-[#36B92E] transition-colors"
+      onClick={onClick}
+    >
       <div className="inline-flex items-start gap-4">
         <div className="flex-1 flex items-center gap-2">
           <div className="flex items-center justify-center size-9 rounded-full bg-[#235C4B] outline outline-1 outline-white shrink-0">
-            <span className="text-[16px] leading-[24px] font-bold text-[#CEFFEB]">T</span>
+            <span className="text-[16px] leading-[24px] font-bold text-[#CEFFEB]">{item.cooperative.charAt(0)}</span>
           </div>
           <div className="flex-1 flex flex-col gap-1">
-            <div className="flex items-start gap-2">
+            <div className="flex items-start gap-2 flex-wrap">
               <span className="text-[16px] leading-[24px] font-bold text-[#161D14]">
                 {item.commodity} • {item.requestId}
               </span>
-              <div className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-[#FEF0D8] rounded-[6px]">
-                <span className="size-[5px] rounded-full bg-[#995917]" />
-                <span className="text-[12px] leading-[18px] font-normal text-[#995917]">{item.status}</span>
-              </div>
+              {item.statuses.map((s, i) => {
+                const colors = {
+                  green: { bg: "#D4F5D0", dot: "#1A5514", text: "#1A5514" },
+                  blue: { bg: "#D5E6FD", dot: "#00439E", text: "#00439E" },
+                  red: { bg: "#FEE2E2", dot: "#DC2626", text: "#DC2626" },
+                  warning: { bg: "#FEF0D8", dot: "#995917", text: "#995917" },
+                }
+                const c = colors[s.color]
+                return (
+                  <span key={i} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[6px]" style={{ background: c.bg }}>
+                    <span className="size-[5px] rounded-full" style={{ background: c.dot }} />
+                    <span className="text-[12px] leading-[18px] font-normal" style={{ color: c.text }}>{s.label}</span>
+                  </span>
+                )
+              })}
             </div>
             <p className="text-[12px] leading-[18px] font-normal text-[#71786C]">
-              {item.cooperative} <span className="font-bold"> • </span>{item.product} <span className="font-bold"> • </span>{item.quantity}<span className="font-bold"> • </span> {item.plan}
+              {item.cooperative} <span className="font-bold"> • </span>{item.product} <span className="font-bold"> • </span>{item.quantity}<span className="font-bold"> • </span> Plan {item.plan}
             </p>
           </div>
         </div>
-        <div className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-[#E2D1FD] rounded-[6px] shrink-0">
-          <span className="size-[5px] rounded-full bg-[#7925CC]" />
-          <span className="text-[12px] leading-[18px] font-normal text-[#7925CC]">{item.tag}</span>
+        <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[6px] shrink-0" style={{ background: item.tag.color === "purple" ? "#E2D1FD" : "#D5E6FD" }}>
+          <span className="size-[5px] rounded-full" style={{ background: item.tag.color === "purple" ? "#7925CC" : "#00439E" }} />
+          <span className="text-[12px] leading-[18px] font-normal" style={{ color: item.tag.color === "purple" ? "#7925CC" : "#00439E" }}>{item.tag.label}</span>
         </div>
       </div>
       <div className="inline-flex items-start gap-4 px-2 py-1 bg-[#F7FAF6] rounded-[6px] text-[12px] leading-[18px]">
         <span className="text-[#525C4E]">Scheduled: <span className="font-bold">{item.scheduledDate}</span></span>
         <span className="text-[#525C4E]">By: <span className="font-bold">{item.assignedTo}</span></span>
-        <span className="flex items-center gap-1 text-[#008744]">
-          <IconCheck className="size-4" />
-          Confirmed {item.confirmedDate} by {item.confirmedBy}
-        </span>
+        {item.confirmedBy !== "—" && (
+          <span className="flex items-center gap-1 text-[#008744]">
+            <IconCheck className="size-4" />
+            Confirmed {item.confirmedDate} by {item.confirmedBy}
+          </span>
+        )}
       </div>
     </div>
   )
@@ -233,7 +234,7 @@ function AlertCard({ alert }: { alert: typeof alerts[number] }) {
   )
 }
 
-export function DashboardPage() {
+export function DashboardPage({ onNavigate }: { onNavigate?: (page: string, tab?: string) => void }) {
   return (
     <div className="flex flex-col gap-6">
       {/* Metric Cards */}
@@ -262,7 +263,11 @@ export function DashboardPage() {
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {pipelineCards.map((card) => (
-            <PipelineCard key={card.label} card={card} />
+            <PipelineCard
+              key={card.label}
+              card={card}
+              onClick={() => onNavigate?.(card.navigateTo, card.navigateTab)}
+            />
           ))}
         </div>
       </div>
@@ -276,8 +281,12 @@ export function DashboardPage() {
             <IconChevronUp className="size-5 text-[#161D14]" />
           </div>
           <div className="flex flex-col gap-3">
-            {pipelineActions.map((item, i) => (
-              <PipelineActionCard key={i} item={item} />
+            {pipelineActionRequests.map((item, i) => (
+              <PipelineActionCard
+                key={i}
+                item={item}
+                onClick={() => onNavigate?.("Procurement Request")}
+              />
             ))}
           </div>
         </div>

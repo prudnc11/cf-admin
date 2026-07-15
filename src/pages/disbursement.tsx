@@ -20,8 +20,14 @@ import {
 } from "@tabler/icons-react"
 
 import { requests as procurementRequests } from "./procurement-request"
-import type { RequestCard, PipelineStep } from "./procurement-request"
+import type { RequestCard, PipelineStep, ModalType } from "./procurement-request"
 import { ProcurementRequestDetailPage } from "./procurement-request-detail"
+import { useToast } from "@/hooks/use-toast"
+import { Toast } from "@/components/ui/toast"
+import { FinanceApproveForm } from "@/components/forms/finance-approve-form"
+import { FinanceRejectForm } from "@/components/forms/finance-reject-form"
+import { AttachProofForm } from "@/components/forms/attach-proof-form"
+import { FinanceSignoffForm } from "@/components/forms/finance-signoff-form"
 
 // --- Types ---
 
@@ -140,19 +146,19 @@ function FullPipelineStepper({ steps }: { steps: PipelineStep[] }) {
   )
 }
 
-function DisbursementActions({ stage, onOpen }: { stage: DisbursementStage; onOpen: () => void }) {
+function DisbursementActions({ stage, onAction }: { stage: DisbursementStage; onAction?: (type: ModalType) => void }) {
   if (stage === "awaiting-review") {
     return (
       <div className="flex items-center gap-2">
         <button
-          onClick={(e) => { e.stopPropagation(); onOpen() }}
+          onClick={(e) => { e.stopPropagation(); onAction?.("finance-approve") }}
           className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-[#36B92E] text-white text-[13px] leading-[18px] font-bold hover:bg-[#5EC758] transition-colors"
         >
           <IconCheck className="size-3.5" />
           Approve Disbursement
         </button>
         <button
-          onClick={(e) => { e.stopPropagation(); onOpen() }}
+          onClick={(e) => { e.stopPropagation(); onAction?.("finance-reject") }}
           className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-[#FFDAD6] text-[#8F0004] text-[13px] leading-[18px] font-bold hover:bg-[#FFCCC7] transition-colors"
         >
           <IconX className="size-3.5" />
@@ -167,9 +173,11 @@ function DisbursementActions({ stage, onOpen }: { stage: DisbursementStage; onOp
 function DisbursementCardComponent({
   item,
   onOpen,
+  onAction,
 }: {
   item: DisbursementItem
   onOpen: () => void
+  onAction?: (type: ModalType) => void
 }) {
   const [expanded, setExpanded] = useState(false)
   const req = item.source
@@ -229,7 +237,7 @@ function DisbursementCardComponent({
             </span>
           )}
         </div>
-        {expanded && <DisbursementActions stage={item.financeStage} onOpen={onOpen} />}
+        {expanded && <DisbursementActions stage={item.financeStage} onAction={onAction} />}
       </div>
     </div>
   )
@@ -237,23 +245,77 @@ function DisbursementCardComponent({
 
 // --- Main Page ---
 
-export function DisbursementPage({ onDetailViewChange }: { onDetailViewChange?: (v: boolean) => void }) {
-  const [activeTab, setActiveTab] = useState("Awaiting Review")
+export function DisbursementPage({ onDetailViewChange, initialTab }: { onDetailViewChange?: (v: boolean) => void; initialTab?: string }) {
+  const [activeTab, setActiveTab] = useState(initialTab || "Awaiting Review")
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [selectedRequest, setSelectedRequest] = useState<RequestCard | null>(null)
+  const [activeModal, setActiveModal] = useState<{ type: ModalType; requestId: string } | null>(null)
+  const { toast, showToast, dismissToast } = useToast()
 
   useEffect(() => {
     onDetailViewChange?.(!!selectedRequest)
   }, [selectedRequest, onDetailViewChange])
 
+  const handleAction = (type: ModalType, requestId: string) => {
+    setActiveModal({ type, requestId })
+  }
+
+  const closeModal = () => setActiveModal(null)
+
+  const handleFormSubmit = (message: string) => {
+    showToast(message)
+    closeModal()
+  }
+
+  function renderDisbursementModals() {
+    if (!activeModal) return null
+    const reqId = activeModal.requestId
+    const activeReq = disbursementItems.find((d) => d.source.requestId === reqId)?.source
+    if (!activeReq) return null
+
+    return (
+      <>
+        <FinanceApproveForm
+          open={activeModal.type === "finance-approve"}
+          onOpenChange={(o) => !o && closeModal()}
+          request={activeReq}
+          onSubmit={() => handleFormSubmit(`Disbursement approved for ${reqId} successfully`)}
+        />
+        <FinanceRejectForm
+          open={activeModal.type === "finance-reject"}
+          onOpenChange={(o) => !o && closeModal()}
+          request={activeReq}
+          onSubmit={() => handleFormSubmit(`Disbursement rejected for ${reqId} and returned to Ops Admin successfully`)}
+        />
+        <AttachProofForm
+          open={activeModal.type === "attach-proof"}
+          onOpenChange={(o) => !o && closeModal()}
+          request={activeReq}
+          onSubmit={() => handleFormSubmit(`Proof attached for ${reqId} successfully`)}
+        />
+        <FinanceSignoffForm
+          open={activeModal.type === "finance-signoff"}
+          onOpenChange={(o) => !o && closeModal()}
+          request={activeReq}
+          onSubmit={() => handleFormSubmit(`Sign-Off for ${reqId} completed & Supply chain notified successfully`)}
+        />
+      </>
+    )
+  }
+
   // Detail view
   if (selectedRequest) {
     return (
-      <ProcurementRequestDetailPage
-        onBack={() => setSelectedRequest(null)}
-        request={selectedRequest}
-        context="disbursement"
-      />
+      <>
+        <ProcurementRequestDetailPage
+          onBack={() => setSelectedRequest(null)}
+          request={selectedRequest}
+          context="disbursement"
+          onAction={(type) => handleAction(type, selectedRequest.requestId)}
+        />
+        {toast && <Toast message={toast} onDismiss={dismissToast} />}
+        {renderDisbursementModals()}
+      </>
     )
   }
 
@@ -342,6 +404,7 @@ export function DisbursementPage({ onDetailViewChange }: { onDetailViewChange?: 
             key={i}
             item={item}
             onOpen={() => setSelectedRequest(item.source)}
+            onAction={(type) => handleAction(type, item.source.requestId)}
           />
         ))}
         {filteredCards.length === 0 && (
@@ -389,6 +452,12 @@ export function DisbursementPage({ onDetailViewChange }: { onDetailViewChange?: 
           </div>
         </div>
       </div>
+
+      {/* Toast */}
+      {toast && <Toast message={toast} onDismiss={dismissToast} />}
+
+      {/* Modals */}
+      {renderDisbursementModals()}
     </div>
   )
 }
