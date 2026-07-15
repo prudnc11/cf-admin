@@ -70,9 +70,10 @@ type HeatmapRow = {
 
 type DelayReason = {
   label: string
-  value: number
-  maxValue: number
-  color: string
+  value: string
+  filledSegments: number
+  filledColor: string
+  emptyColor: string
 }
 
 // ── Static data ──
@@ -85,14 +86,14 @@ const summaryCards = [
 ]
 
 const delayReasons: DelayReason[] = [
-  { label: "Transport delay", value: 1.8, maxValue: 2.0, color: "#1A5514" },
-  { label: "Documentation", value: 0.4, maxValue: 2.0, color: "#995917" },
-  { label: "Inventory Shortage", value: 1.1, maxValue: 2.0, color: "#BA1A1A" },
-  { label: "Buyer Availability", value: 0.1, maxValue: 2.0, color: "#BA1A1A" },
-  { label: "Farmer Unavailable", value: 1.8, maxValue: 2.0, color: "#1A5514" },
-  { label: "Logistics delay", value: 0.1, maxValue: 2.0, color: "#BA1A1A" },
-  { label: "Supplier Shortfall", value: 0.4, maxValue: 2.0, color: "#995917" },
-  { label: "Quality Rejection", value: 1.8, maxValue: 2.0, color: "#1A5514" },
+  { label: "Transport delay", value: "1.8 d", filledSegments: 6, filledColor: "#306B28", emptyColor: "#E1E4DA" },
+  { label: "Documentation", value: "0.4 d", filledSegments: 5, filledColor: "#995917", emptyColor: "#FEF0D8" },
+  { label: "Inventory Shortage", value: "1.1 d", filledSegments: 7, filledColor: "#8F0004", emptyColor: "#FFDAD6" },
+  { label: "Buyer Availability", value: "0.1 d", filledSegments: 4, filledColor: "#8F0004", emptyColor: "#FFDAD6" },
+  { label: "Farmer Unavailable", value: "1.8 d", filledSegments: 6, filledColor: "#306B28", emptyColor: "#E1E4DA" },
+  { label: "Logistics delay", value: "0.1 d", filledSegments: 4, filledColor: "#8F0004", emptyColor: "#FFDAD6" },
+  { label: "Supplier Shortfall", value: "0.4 d", filledSegments: 5, filledColor: "#995917", emptyColor: "#FEF0D8" },
+  { label: "Quality Rejection", value: "1.8 d", filledSegments: 6, filledColor: "#306B28", emptyColor: "#E1E4DA" },
 ]
 
 const heatmapData: HeatmapRow[] = [
@@ -180,15 +181,28 @@ function SeverityBadge({ severity }: { severity: FulfillmentSeverity }) {
 function HeatmapCell({ value }: { value: number | null }) {
   if (value === null) {
     return (
-      <div className="size-8 rounded-[6px] bg-[#F7FAF6] flex items-center justify-center">
-        <span className="text-[12px] leading-[18px] text-[#C3C8BC]">&mdash;</span>
+      <div className="w-12 h-12 px-2 py-4 bg-[#EDF0E6] rounded-[6px] flex items-center justify-center">
+        <span className="text-[12px] leading-[18px] font-bold text-[#71786C]">--</span>
       </div>
     )
   }
-  const bg = value >= 2 ? "#BA1A1A" : "#1A5514"
+  if (value >= 2) {
+    return (
+      <div className="w-12 h-12 px-2 py-4 bg-[#FFDAD6] rounded-[6px] flex items-center justify-center">
+        <span className="text-[12px] leading-[18px] font-bold text-[#8F0004]">{value}</span>
+      </div>
+    )
+  }
+  if (value === 1) {
+    return (
+      <div className="w-12 h-12 px-2 py-4 bg-[#FEF0D8] rounded-[6px] flex items-center justify-center">
+        <span className="text-[12px] leading-[18px] font-bold text-[#995917]">{value}</span>
+      </div>
+    )
+  }
   return (
-    <div className="size-8 rounded-[6px] flex items-center justify-center" style={{ background: bg }}>
-      <span className="text-[12px] leading-[18px] font-bold text-white">{value}</span>
+    <div className="w-12 h-12 px-2 py-4 bg-[#EDF0E6] rounded-[6px] flex items-center justify-center">
+      <span className="text-[12px] leading-[18px] font-bold text-[#161D14]">{value}</span>
     </div>
   )
 }
@@ -554,77 +568,95 @@ export function DelayMonitoringPage() {
       {/* Delay Reason Distribution + Heatmap */}
       <div className="flex gap-4">
         {/* Delay Reason Distribution */}
-        <div className="flex-1 p-4 bg-white rounded-[12px] shadow-sm outline outline-1 outline-[#E5E8DF] flex flex-col gap-4">
+        <div className="flex-1 p-4 bg-white rounded-[12px] shadow-[0px_1px_2px_rgba(22,29,20,0.10)] outline outline-1 outline-[#E5E8DF] flex flex-col gap-3">
           <div className="flex items-center gap-2.5">
             <div className="p-1.5 rounded-[6px] flex items-center justify-center bg-[#E2D1FD]">
               <IconClipboardCheck className="size-4 text-[#7925CC]" />
             </div>
             <h3 className="flex-1 text-[16px] leading-[24px] font-bold text-[#161D14]">Delay Reason Distribution</h3>
           </div>
-          <div className="flex flex-col gap-3">
+          <div className="bg-white rounded-[6px] outline outline-1 outline-[#E5E8DF] overflow-hidden flex flex-col">
             {delayReasons.map((r) => (
-              <div key={r.label} className="flex items-center gap-3">
-                <span className="w-[140px] text-[14px] leading-[20px] text-[#161D14] shrink-0">{r.label}</span>
-                <div className="flex-1 h-[8px] bg-[#E5E8DF] rounded-full overflow-hidden">
-                  <div className="h-full rounded-full" style={{ width: `${(r.value / r.maxValue) * 100}%`, background: r.color }} />
+              <div key={r.label} className="flex items-start border-b border-[#E5E8DF] last:border-b-0">
+                <div className="w-[148px] h-[53px] py-2 pl-4 pr-2 flex items-center shrink-0">
+                  <span className="text-[14px] leading-[20px] text-[#161D14]">{r.label}</span>
                 </div>
-                <span className="w-[40px] text-[14px] leading-[20px] text-[#525C4E] text-right">{r.value} d</span>
+                <div className="flex-1 h-[53px] p-2 flex items-center">
+                  <div className="w-full h-[12px] rounded-[4px] overflow-hidden flex">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="flex-1 h-full"
+                        style={{ background: i < r.filledSegments ? r.filledColor : r.emptyColor }}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div className="w-[64px] h-[53px] py-2 pl-3 pr-4 flex items-center shrink-0">
+                  <span className="text-[14px] leading-[20px] text-[#161D14]">{r.value}</span>
+                </div>
               </div>
             ))}
           </div>
         </div>
 
         {/* Fulfillment Delay Heatmap */}
-        <div className="flex-1 p-4 bg-white rounded-[12px] shadow-sm outline outline-1 outline-[#E5E8DF] flex flex-col gap-4">
+        <div className="flex-1 p-4 bg-white rounded-[12px] shadow-sm outline outline-1 outline-[#E5E8DF] flex flex-col gap-3">
           <div className="flex items-center gap-2.5">
-            <div className="p-1.5 rounded-[6px] flex items-center justify-center bg-[#E2D1FD]">
-              <IconClock className="size-4 text-[#7925CC]" />
+            <div className="p-1.5 rounded-[6px] flex items-center justify-center bg-[#D5E6FD]">
+              <IconClock className="size-4 text-[#00439E]" />
             </div>
             <h3 className="flex-1 text-[16px] leading-[24px] font-bold text-[#161D14]">Fulfilment Delay Heatmap</h3>
             <div className="flex items-center gap-2 text-[12px] leading-[18px] text-[#525C4E]">
               <span>Delays per day:</span>
-              <div className="flex items-center gap-1.5">
-                <div className="size-4 rounded-[4px] bg-[#F7FAF6] border border-[#E5E8DF]" />
+              <div className="flex items-center gap-2">
+                <div className="size-6 rounded-[4px] bg-[#EDF0E6]" />
                 <span>None</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <div className="size-4 rounded-[4px] bg-[#1A5514]" />
-                <span>1</span>
+              <div className="flex items-center gap-2">
+                <div className="size-6 rounded-[4px] bg-[#FEF0D8] flex items-center justify-center">
+                  <span className="text-[12px] leading-[18px] text-[#995917]">1</span>
+                </div>
               </div>
-              <div className="flex items-center gap-1.5">
-                <div className="size-4 rounded-[4px] bg-[#BA1A1A]" />
-                <span>2+</span>
+              <div className="flex items-center gap-2">
+                <div className="size-6 rounded-[4px] bg-[#FFDAD6] flex items-center justify-center">
+                  <span className="text-[12px] leading-[18px] text-[#8F0004]">2+</span>
+                </div>
               </div>
             </div>
           </div>
-          <table className="w-full">
-            <thead>
-              <tr>
-                <th className="text-left text-[12px] leading-[18px] font-bold text-[#525C4E] pb-2 pr-3">Aggregators</th>
-                {weekDays.map((d) => (
-                  <th key={d} className="text-center text-[12px] leading-[18px] font-bold text-[#525C4E] pb-2 w-[36px]">{d}</th>
-                ))}
-                <th className="text-center text-[12px] leading-[18px] font-bold text-[#525C4E] pb-2 w-[44px]">TOTAL</th>
-              </tr>
-            </thead>
-            <tbody>
-              {heatmapData.map((row, i) => (
-                <tr key={i}>
-                  <td className="text-[14px] leading-[20px] text-[#161D14] pr-3 py-1.5">{row.aggregator}</td>
-                  {row.days.map((val, j) => (
-                    <td key={j} className="text-center py-1.5">
-                      <div className="flex justify-center">
-                        <HeatmapCell value={val} />
-                      </div>
-                    </td>
-                  ))}
-                  <td className="text-center py-1.5">
-                    <span className="text-[14px] leading-[20px] font-bold" style={{ color: row.total >= 4 ? "#BA1A1A" : "#161D14" }}>{row.total}</span>
-                  </td>
-                </tr>
+          <div className="flex flex-col">
+            {/* Header row */}
+            <div className="flex items-center gap-3">
+              <div className="w-[116px] py-4 shrink-0">
+                <span className="text-[14px] leading-[20px] text-[#71786C]">Aggregators</span>
+              </div>
+              {weekDays.map((d) => (
+                <div key={d} className="w-12 h-12 px-2 py-4 bg-white rounded-[6px] flex items-center justify-center shrink-0">
+                  <span className="text-[12px] leading-[18px] text-[#161D14]">{d}</span>
+                </div>
               ))}
-            </tbody>
-          </table>
+              <div className="w-12 h-12 py-4 bg-white rounded-[6px] flex items-center justify-center shrink-0">
+                <span className="text-[12px] leading-[18px] text-[#161D14]">TOTAL</span>
+              </div>
+            </div>
+            {/* Data rows */}
+            {heatmapData.map((row, i) => (
+              <div key={i} className="flex items-center gap-3 py-1.5">
+                <div className="w-[116px] py-4 shrink-0">
+                  <span className="text-[14px] leading-[20px] text-[#161D14]">{row.aggregator}</span>
+                </div>
+                {row.days.map((val, j) => (
+                  <div key={j} className="shrink-0">
+                    <HeatmapCell value={val} />
+                  </div>
+                ))}
+                <div className="w-12 h-12 px-2 py-4 bg-white rounded-[4px] flex items-center justify-center shrink-0">
+                  <span className="text-[14px] leading-[20px] font-bold text-[#995917]">{row.total}</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
