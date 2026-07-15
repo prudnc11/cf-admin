@@ -18,9 +18,10 @@ import { StockAlertsPage } from "@/pages/stock-alerts"
 import { DiscrepanciesPage } from "@/pages/discrepancies"
 import { MovementLogsPage } from "@/pages/movement-logs"
 import { DelayMonitoringPage } from "@/pages/delay-monitoring"
+import { AggregatorManagementPage } from "@/pages/aggregator-management"
 import { NotificationSheet } from "@/components/notification-sheet"
 
-const PAGES_WITHOUT_SUBHEADER = ["All requests"]
+const PAGES_WITHOUT_SUBHEADER = ["All requests", "Aggregator Management"]
 
 function App() {
   const [activeItem, setActiveItem] = useState("Dashboard")
@@ -108,6 +109,7 @@ function App() {
             {activeItem === "Discrepancies" && <DiscrepanciesPage />}
             {activeItem === "Movements Logs" && <MovementLogsPage />}
             {activeItem === "Delays Monitoring" && <DelayMonitoringPage />}
+            {activeItem === "Aggregator Management" && <AggregatorManagementPage />}
           </main>
         </SidebarInset>
         <NotificationSheet open={notifOpen} onClose={() => setNotifOpen(false)} />
