@@ -18,7 +18,6 @@ import {
   IconX,
 } from "@tabler/icons-react"
 import { requests } from "./procurement-request"
-import { supplyRequests } from "./supply-requests"
 import { supplyBids } from "./supply-bids"
 
 const metricCards = [
@@ -66,11 +65,6 @@ const pipelineCards: PipelineCardData[] = [
 // Derive pipeline action items from real requests that need immediate action
 const pipelineActionRequests = requests
   .filter((r) => r.currentStage && r.tabCategory !== "Rejected")
-  .slice(0, 3)
-
-// Supply bids needing action
-const actionBids = supplyBids
-  .filter((b) => b.stage !== "completed" && b.stage !== "rejected")
   .slice(0, 3)
 
 const alerts = [

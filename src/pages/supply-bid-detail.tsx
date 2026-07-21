@@ -1,5 +1,5 @@
 import { useState, Fragment } from "react"
-import type { SupplyBid, PipelineStep } from "./supply-bids"
+import type { SupplyBid } from "./supply-bids"
 import {
   IconCheck,
   IconChevronUp,
@@ -13,12 +13,10 @@ import {
   IconBuildingWarehouse,
   IconRoute,
   IconCash,
-  IconClock,
   IconFileText,
   IconMessages,
   IconStar,
   IconClipboardCheck,
-  IconPlus,
   IconDownload,
   IconListDetails,
   IconTimeline,

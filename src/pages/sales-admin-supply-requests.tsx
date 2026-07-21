@@ -18,7 +18,6 @@ import {
   IconCheck,
   IconPlus,
   IconAlertTriangle,
-  IconTrash,
   IconUser,
   IconPackage,
   IconMapPin,
@@ -26,7 +25,6 @@ import {
   IconPlant,
   IconListDetails,
   IconTimeline,
-  IconDownload,
   IconArrowBack,
 } from "@tabler/icons-react"
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@/components/ui/modal"
@@ -76,8 +74,6 @@ type SalesSupplyRequest = {
 const now = new Date()
 const in2Days = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString()
 const in1Day = new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000).toISOString()
-const expired = new Date(now.getTime() - 1 * 60 * 60 * 1000).toISOString()
-
 const initialRequests: SalesSupplyRequest[] = [
   {
     id: "SSR-2026-001", crop: "Rice", variety: "Jasmine", quantity: "200", unit: "MT", region: "Volta Region",
@@ -432,8 +428,6 @@ function CreateRequestModal({
   const [linkedBuyerRequestId, setLinkedBuyerRequestId] = useState("")
   const [errors, setErrors] = useState<Record<string, boolean>>({})
   const [attempted, setAttempted] = useState(false)
-
-  const requiredFields = { crop, variety, quantity, region, linkedBuyerRequestId, windowStart, windowEnd }
 
   const validate = () => {
     const newErrors: Record<string, boolean> = {}

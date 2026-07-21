@@ -12,14 +12,10 @@ import {
   IconCalendar,
   IconPackage,
   IconPlant,
-  IconBuildingWarehouse,
   IconCash,
-  IconClock,
   IconFileText,
   IconMapPin,
   IconClipboardCheck,
-  IconWorld,
-  IconStar,
   IconDownload,
   IconListDetails,
   IconTimeline,
@@ -230,10 +226,6 @@ export function SupplyRequestDetailPage({
   const linkedBids = supplyBids.filter(b => b.supplyRequestId === request.id)
   const activeBids = linkedBids.filter(b => b.stage !== "rejected" && b.stage !== "completed")
   const completedBids = linkedBids.filter(b => b.stage === "completed")
-  const totalBidValue = linkedBids.reduce((sum, b) => {
-    const num = parseFloat(b.totalValue.replace(/[^0-9.]/g, ""))
-    return sum + (isNaN(num) ? 0 : num)
-  }, 0)
   const totalBidQty = linkedBids.reduce((sum, b) => sum + parseFloat(b.quantity), 0)
 
   const [activeTab, setActiveTab] = useState<"details" | "audit">("details")
