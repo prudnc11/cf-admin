@@ -11,6 +11,8 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { DashboardPage } from "@/pages/dashboard"
 import { AllRequestsPage } from "@/pages/all-requests"
 import { ProcurementRequestPage } from "@/pages/procurement-request"
+import { SupplyRequestsPage } from "@/pages/supply-requests"
+import { SupplyBidsPage } from "@/pages/supply-bids"
 import { DisbursementPage } from "@/pages/disbursement"
 import { OperationsOverviewPage } from "@/pages/operations-overview"
 import { InventoryOverviewPage } from "@/pages/inventory-overview"
@@ -19,9 +21,10 @@ import { DiscrepanciesPage } from "@/pages/discrepancies"
 import { MovementLogsPage } from "@/pages/movement-logs"
 import { DelayMonitoringPage } from "@/pages/delay-monitoring"
 import { AggregatorManagementPage } from "@/pages/aggregator-management"
+import { SalesAdminSupplyRequestsPage } from "@/pages/sales-admin-supply-requests"
 import { NotificationSheet } from "@/components/notification-sheet"
 
-const PAGES_WITHOUT_SUBHEADER = ["All requests", "Aggregator Management"]
+const PAGES_WITHOUT_SUBHEADER = ["All requests", "Aggregator Management", "Supply Requests", "Supply Bids", "SA Supply Requests"]
 
 function App() {
   const [activeItem, setActiveItem] = useState("Dashboard")
@@ -35,7 +38,7 @@ function App() {
     setIsDetailView(false)
   }
 
-  const hideSubHeader = PAGES_WITHOUT_SUBHEADER.includes(activeItem) || ((activeItem === "Procurement Request" || activeItem === "Disbursement") && isDetailView)
+  const hideSubHeader = PAGES_WITHOUT_SUBHEADER.includes(activeItem) || ((activeItem === "Procurement Request" || activeItem === "Disbursement" || activeItem === "Supply Requests" || activeItem === "Supply Bids" || activeItem === "SA Supply Requests") && isDetailView)
 
   return (
     <TooltipProvider>
@@ -103,6 +106,8 @@ function App() {
             {activeItem === "All requests" && <AllRequestsPage />}
             {activeItem === "Procurement Request" && <ProcurementRequestPage onDetailViewChange={setIsDetailView} initialTab={initialTab} />}
             {activeItem === "Disbursement" && <DisbursementPage onDetailViewChange={setIsDetailView} initialTab={initialTab} />}
+            {activeItem === "Supply Requests" && <SupplyBidsPage onDetailViewChange={setIsDetailView} initialTab={initialTab} />}
+            {activeItem === "Supply Bids" && <SupplyRequestsPage onDetailViewChange={setIsDetailView} initialTab={initialTab} />}
             {activeItem === "Overview" && <OperationsOverviewPage />}
             {activeItem === "Inventory Overview" && <InventoryOverviewPage />}
             {activeItem === "Stock alerts" && <StockAlertsPage />}
@@ -110,9 +115,17 @@ function App() {
             {activeItem === "Movements Logs" && <MovementLogsPage />}
             {activeItem === "Delays Monitoring" && <DelayMonitoringPage />}
             {activeItem === "Aggregator Management" && <AggregatorManagementPage />}
+            {activeItem === "SA Supply Requests" && <SalesAdminSupplyRequestsPage onDetailViewChange={setIsDetailView} initialTab={initialTab} />}
           </main>
         </SidebarInset>
-        <NotificationSheet open={notifOpen} onClose={() => setNotifOpen(false)} />
+        <NotificationSheet
+          open={notifOpen}
+          onClose={() => setNotifOpen(false)}
+          onNavigate={(page, tab) => {
+            navigateToPage(page, tab)
+            setNotifOpen(false)
+          }}
+        />
       </SidebarProvider>
     </TooltipProvider>
   )

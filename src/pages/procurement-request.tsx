@@ -1,4 +1,4 @@
-import { useState, Fragment } from "react"
+import { useState, useEffect, Fragment } from "react"
 import { ProcurementRequestDetailPage } from "./procurement-request-detail"
 import {
   IconChevronDown,
@@ -638,6 +638,10 @@ export function ProcurementRequestPage({ onDetailViewChange, initialTab }: { onD
   const [localRequests] = useState<RequestCard[]>(() => [...requests])
   const [activeModal, setActiveModal] = useState<{ type: ModalType; requestIndex: number } | null>(null)
   const { toast, showToast, dismissToast } = useToast()
+
+  useEffect(() => {
+    if (initialTab) setActiveTab(initialTab)
+  }, [initialTab])
 
   const openDetail = (index: number) => {
     setSelectedRequest(index)

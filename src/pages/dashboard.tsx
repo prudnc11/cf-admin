@@ -18,6 +18,8 @@ import {
   IconX,
 } from "@tabler/icons-react"
 import { requests } from "./procurement-request"
+import { supplyRequests } from "./supply-requests"
+import { supplyBids } from "./supply-bids"
 
 const metricCards = [
   { label: "Active Aggregators", value: "112", iconBg: "#D5E6FD", iconColor: "#00439E", icon: IconUsersGroup },
@@ -30,16 +32,15 @@ const metricCards = [
   { label: "SLA Breaches", value: "5", iconBg: "#FEE2E2", iconColor: "#DC2626", icon: IconShieldCheck },
 ]
 
-const pipelineSteps = ["Delivery Method", "Field QA", "Approval", "Finance", "Pickup", "Warehouse QA", "GRN", "Routing"]
+const pipelineSteps = ["Bid Submitted", "Negotiation", "Scheduling", "QA", "Finance", "GRN", "Routing"]
 
-// Compute real counts from procurement data
-const approvalCount = requests.filter((r) => r.currentStage === "approval").length
-const overdueCount = requests.filter((r) => r.tabCategory === "Overdue").length
-const financeReviewCount = requests.filter((r) => r.tabCategory === "Finance" && r.detailState.financeSignoff === "awaiting-review").length
-const pendingProofCount = requests.filter((r) => r.tabCategory === "Finance" && r.detailState.financeSignoff === "pending-proof").length
-const pendingProofRequests = requests.filter((r) => r.tabCategory === "Finance").length
-const warehouseQACount = requests.filter((r) => r.tabCategory === "Warehouse QA").length
-const grnRoutingCount = requests.filter((r) => r.tabCategory === "GRN").length
+// Compute real counts from supply bids data
+const negotiationCount = supplyBids.filter((b) => b.stage === "negotiation").length
+const schedulingCount = supplyBids.filter((b) => b.stage === "scheduling").length
+const financeReviewCount = supplyBids.filter((b) => b.stage === "finance" && b.financeStatus === "awaiting-review").length
+const pendingProofCount = supplyBids.filter((b) => b.stage === "finance" && b.financeStatus === "pending-proof").length
+const qaCount = supplyBids.filter((b) => b.stage === "field-qa" || b.stage === "warehouse-qa").length
+const grnRoutingCount = supplyBids.filter((b) => b.stage === "grn").length
 
 type PipelineCardData = {
   label: string
@@ -54,17 +55,22 @@ type PipelineCardData = {
 }
 
 const pipelineCards: PipelineCardData[] = [
-  { label: "Awaiting Ops Approval", value: String(approvalCount), iconBg: "#D5E6FD", iconColor: "#00439E", icon: IconLoader, navigateTo: "Procurement Request", navigateTab: "Field QA" },
-  { label: "Overdue", value: String(overdueCount), iconBg: "#FEE2E2", iconColor: "#DC2626", icon: IconAlertTriangle, navigateTo: "Procurement Request", navigateTab: "Overdue" },
+  { label: "In Negotiation", value: String(negotiationCount), iconBg: "#D5E6FD", iconColor: "#00439E", icon: IconLoader, navigateTo: "Supply Requests", navigateTab: "Negotiation" },
+  { label: "Awaiting Scheduling", value: String(schedulingCount), iconBg: "#FEF0D8", iconColor: "#995917", icon: IconClock, navigateTo: "Supply Requests", navigateTab: "Scheduling" },
   { label: "Awaiting Finance Review", value: String(financeReviewCount), iconBg: "#F3E8FD", iconColor: "#6B21A8", icon: IconClock, navigateTo: "Disbursement", navigateTab: "Awaiting Review" },
-  { label: "Pending disbursement", value: String(pendingProofCount), extra: `${pendingProofRequests} requests`, iconBg: "#D4F5D0", iconColor: "#1A5514", icon: IconCash, navigateTo: "Disbursement", navigateTab: "Pending Proof" },
-  { label: "Awaiting Warehouse QA", value: String(warehouseQACount), iconBg: "#D4F5D0", iconColor: "#1A5514", icon: IconBuildingWarehouse, navigateTo: "Procurement Request", navigateTab: "Warehouse QA" },
-  { label: "GRN / Routing Needed", value: String(grnRoutingCount), iconBg: "#D4F5D0", iconColor: "#1A5514", icon: IconNotes, navigateTo: "Procurement Request", navigateTab: "GRN" },
+  { label: "Pending Disbursement", value: String(pendingProofCount), iconBg: "#D4F5D0", iconColor: "#1A5514", icon: IconCash, navigateTo: "Disbursement", navigateTab: "Pending Proof" },
+  { label: "Awaiting QA", value: String(qaCount), iconBg: "#D4F5D0", iconColor: "#1A5514", icon: IconBuildingWarehouse, navigateTo: "Supply Requests", navigateTab: "QA" },
+  { label: "GRN / Routing Needed", value: String(grnRoutingCount), iconBg: "#D4F5D0", iconColor: "#1A5514", icon: IconNotes, navigateTo: "Supply Requests", navigateTab: "GRN" },
 ]
 
 // Derive pipeline action items from real requests that need immediate action
 const pipelineActionRequests = requests
   .filter((r) => r.currentStage && r.tabCategory !== "Rejected")
+  .slice(0, 3)
+
+// Supply bids needing action
+const actionBids = supplyBids
+  .filter((b) => b.stage !== "completed" && b.stage !== "rejected")
   .slice(0, 3)
 
 const alerts = [
@@ -98,27 +104,31 @@ const alerts = [
   },
 ]
 
-function MetricCard({ card }: { card: typeof metricCards[number] }) {
+function MetricCard({ card, index }: { card: typeof metricCards[number]; index: number }) {
   const Icon = card.icon
   return (
-    <div className="p-4 bg-white rounded-[12px] shadow-sm outline outline-1 outline-[#E5E8DF] flex flex-col gap-3">
+    <div
+      className="p-4 bg-white rounded-[12px] shadow-sm outline outline-1 outline-[#E5E8DF] flex flex-col gap-3 hover-lift stagger-child"
+      style={{ "--stagger-index": index } as React.CSSProperties}
+    >
       <div className="flex items-center gap-2">
         <div className="p-1.5 rounded-md flex items-center" style={{ background: card.iconBg }}>
           <Icon className="size-4" style={{ color: card.iconColor }} />
         </div>
         <span className="flex-1 text-[14px] leading-[20px] font-normal text-[#161D14]">{card.label}</span>
-        <IconChevronRight className="size-4 text-[#161D14]" />
+        <IconChevronRight className="size-4 text-[#161D14] transition-transform duration-200 group-hover:translate-x-0.5" />
       </div>
       <p className="text-[20px] leading-[28px] font-bold tracking-[0.1px] text-[#161D14]">{card.value}</p>
     </div>
   )
 }
 
-function PipelineCard({ card, onClick }: { card: PipelineCardData; onClick?: () => void }) {
+function PipelineCard({ card, onClick, index }: { card: PipelineCardData; onClick?: () => void; index: number }) {
   const Icon = card.icon
   return (
     <div
-      className="p-4 bg-white rounded-[12px] shadow-sm outline outline-1 outline-[#E5E8DF] flex flex-col gap-3 cursor-pointer hover:outline-[#36B92E] transition-colors"
+      className="p-4 bg-white rounded-[12px] shadow-sm outline outline-1 outline-[#E5E8DF] flex flex-col gap-3 cursor-pointer hover:outline-[#36B92E] transition-all duration-200 hover-lift stagger-child"
+      style={{ "--stagger-index": index } as React.CSSProperties}
       onClick={onClick}
     >
       <div className="flex items-center gap-2">
@@ -141,10 +151,11 @@ function PipelineCard({ card, onClick }: { card: PipelineCardData; onClick?: () 
   )
 }
 
-function PipelineActionCard({ item, onClick }: { item: typeof requests[number]; onClick?: () => void }) {
+function PipelineActionCard({ item, onClick, index }: { item: typeof requests[number]; onClick?: () => void; index: number }) {
   return (
     <div
-      className="p-4 rounded-[12px] shadow-sm outline outline-1 outline-[#E5E8DF] flex flex-col gap-2 cursor-pointer hover:outline-[#36B92E] transition-colors"
+      className="p-4 rounded-[12px] shadow-sm outline outline-1 outline-[#E5E8DF] flex flex-col gap-2 cursor-pointer hover:outline-[#36B92E] transition-all duration-200 hover-lift stagger-child"
+      style={{ "--stagger-index": index } as React.CSSProperties}
       onClick={onClick}
     >
       <div className="inline-flex items-start gap-4">
@@ -197,16 +208,17 @@ function PipelineActionCard({ item, onClick }: { item: typeof requests[number]; 
   )
 }
 
-function AlertCard({ alert }: { alert: typeof alerts[number] }) {
+function AlertCard({ alert, index }: { alert: typeof alerts[number]; index: number }) {
   const isCritical = alert.severity === "critical"
 
   return (
     <div
-      className="p-4 rounded-[12px] shadow-sm flex flex-col gap-2"
+      className="p-4 rounded-[12px] shadow-sm flex flex-col gap-2 hover-lift stagger-child"
       style={{
+        "--stagger-index": index,
         background: isCritical ? "#FFDAD6" : "#FEF0D8",
         border: `1px solid ${isCritical ? "#BA1A1A" : "#FBB33A"}`,
-      }}
+      } as React.CSSProperties}
     >
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-[7px]">
@@ -239,13 +251,13 @@ export function DashboardPage({ onNavigate }: { onNavigate?: (page: string, tab?
     <div className="flex flex-col gap-6">
       {/* Metric Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {metricCards.map((card) => (
-          <MetricCard key={card.label} card={card} />
+        {metricCards.map((card, i) => (
+          <MetricCard key={card.label} card={card} index={i} />
         ))}
       </div>
 
       {/* Aggregation Pipeline */}
-      <div className="p-6 bg-white rounded-[12px] shadow-sm outline outline-1 outline-[#E5E8DF] flex flex-col gap-4">
+      <div className="p-6 bg-white rounded-[12px] shadow-sm outline outline-1 outline-[#E5E8DF] flex flex-col gap-4 animate-fade-in-up" style={{ animationDelay: "0.3s" }}>
         <div className="flex items-center gap-3">
           <h2 className="text-[18px] leading-[24px] font-bold text-[#161D14]">Aggregation pipeline</h2>
           <span className="size-1.5 rounded-full bg-[#525C4E]" />
@@ -262,10 +274,11 @@ export function DashboardPage({ onNavigate }: { onNavigate?: (page: string, tab?
           </button>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {pipelineCards.map((card) => (
+          {pipelineCards.map((card, i) => (
             <PipelineCard
               key={card.label}
               card={card}
+              index={i}
               onClick={() => onNavigate?.(card.navigateTo, card.navigateTab)}
             />
           ))}
@@ -285,7 +298,8 @@ export function DashboardPage({ onNavigate }: { onNavigate?: (page: string, tab?
               <PipelineActionCard
                 key={i}
                 item={item}
-                onClick={() => onNavigate?.("Procurement Request")}
+                index={i}
+                onClick={() => onNavigate?.("Supply Requests")}
               />
             ))}
           </div>
@@ -305,7 +319,7 @@ export function DashboardPage({ onNavigate }: { onNavigate?: (page: string, tab?
           </div>
           <div className="flex flex-col gap-3">
             {alerts.map((alert, i) => (
-              <AlertCard key={i} alert={alert} />
+              <AlertCard key={i} alert={alert} index={i} />
             ))}
           </div>
         </div>

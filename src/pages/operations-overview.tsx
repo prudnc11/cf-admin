@@ -222,10 +222,13 @@ const commodityRows: CommodityRow[] = [
 
 // ── Subcomponents ──
 
-function SummaryCard({ card }: { card: typeof summaryCards[number] }) {
+function SummaryCard({ card, index }: { card: typeof summaryCards[number]; index: number }) {
   const Icon = card.icon
   return (
-    <div className="flex-1 min-w-0 p-4 bg-white rounded-[12px] shadow-sm outline outline-1 outline-[#E5E8DF] flex flex-col gap-2">
+    <div
+      className="flex-1 min-w-0 p-4 bg-white rounded-[12px] shadow-sm outline outline-1 outline-[#E5E8DF] flex flex-col gap-2 hover-lift stagger-child"
+      style={{ "--stagger-index": index } as React.CSSProperties}
+    >
       <div className="flex items-center gap-2">
         <div className="size-8 rounded-[8px] flex items-center justify-center" style={{ background: card.iconBg }}>
           <Icon className="size-4" style={{ color: card.iconColor }} />
@@ -328,9 +331,12 @@ function SmallMonitoringCard({
   )
 }
 
-function AlertRow({ alert, onDismiss }: { alert: AlertItem; onDismiss: () => void }) {
+function AlertRow({ alert, onDismiss, index }: { alert: AlertItem; onDismiss: () => void; index: number }) {
   return (
-    <div className="flex items-center gap-2 px-4 py-3 bg-white shadow-sm rounded-[12px] outline outline-1 outline-[#E5E8DF]">
+    <div
+      className="flex items-center gap-2 px-4 py-3 bg-white shadow-sm rounded-[12px] outline outline-1 outline-[#E5E8DF] hover-lift stagger-child"
+      style={{ "--stagger-index": index } as React.CSSProperties}
+    >
       <div className="p-1.5 rounded-[6px] shrink-0" style={{ background: alert.iconBg }}>
         <IconAlertCircle className="size-4" style={{ color: alert.iconColor }} />
       </div>
@@ -386,7 +392,7 @@ function VolumeChartTooltip({ active, payload, label }: { active?: boolean; payl
   )
 }
 
-function WarehouseBar({ row }: { row: WarehouseRow }) {
+function WarehouseBar({ row, index }: { row: WarehouseRow; index: number }) {
   const barColors = {
     "On Track": "#1A5514",
     "At Risk": "#E8590C",
@@ -400,12 +406,12 @@ function WarehouseBar({ row }: { row: WarehouseRow }) {
   const b = badgeStyles[row.status]
 
   return (
-    <div className="flex items-center gap-4 py-2">
+    <div className="flex items-center gap-4 py-2 stagger-child" style={{ "--stagger-index": index } as React.CSSProperties}>
       <span className="w-[120px] text-[14px] leading-[20px] text-[#161D14] shrink-0">{row.name}</span>
       <div className="flex-1 h-[10px] bg-[#EDF0E6] rounded-full overflow-hidden">
         <div
-          className="h-full rounded-full"
-          style={{ width: `${row.progress}%`, background: barColors[row.status] }}
+          className="h-full rounded-full animate-bar-grow"
+          style={{ width: `${row.progress}%`, background: barColors[row.status], animationDelay: `${index * 100 + 200}ms` }}
         />
       </div>
       <span className="text-[14px] leading-[20px] text-[#525C4E] w-[48px] text-right shrink-0">{row.days}</span>
@@ -426,7 +432,7 @@ function Sparkline({ data, positive }: { data: number[]; positive: boolean }) {
     <div className="w-[80px] h-[28px]">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={chartData}>
-          <Line type="monotone" dataKey="v" stroke={color} strokeWidth={1.5} dot={false} />
+          <Line type="monotone" dataKey="v" stroke={color} strokeWidth={1.5} dot={false} animationDuration={1000} animationBegin={300} />
         </LineChart>
       </ResponsiveContainer>
     </div>
@@ -490,8 +496,8 @@ export function OperationsOverviewPage() {
 
       {/* Operational Summary - 5 KPI cards */}
       <div className="flex gap-4">
-        {summaryCards.map((card) => (
-          <SummaryCard key={card.label} card={card} />
+        {summaryCards.map((card, i) => (
+          <SummaryCard key={card.label} card={card} index={i} />
         ))}
       </div>
 
@@ -535,12 +541,13 @@ export function OperationsOverviewPage() {
           </button>
         </div>
         <div className="flex flex-col gap-3">
-          {visibleAlerts.map((alert) => {
+          {visibleAlerts.map((alert, i) => {
             const originalIndex = alerts.indexOf(alert)
             return (
               <AlertRow
                 key={originalIndex}
                 alert={alert}
+                index={i}
                 onDismiss={() => setDismissedAlerts((prev) => [...prev, originalIndex])}
               />
             )
@@ -583,8 +590,8 @@ export function OperationsOverviewPage() {
                 tickFormatter={(v: number) => `${v} MT`}
               />
               <Tooltip content={<VolumeChartTooltip />} cursor={{ fill: "rgba(0,0,0,0.04)" }} />
-              <Bar dataKey="procurement" fill="#C6E8B8" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="fulfilment" fill="#1A5514" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="procurement" fill="#C6E8B8" radius={[4, 4, 0, 0]} animationDuration={1200} animationBegin={200} />
+              <Bar dataKey="fulfilment" fill="#1A5514" radius={[4, 4, 0, 0]} animationDuration={1200} animationBegin={400} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -600,8 +607,8 @@ export function OperationsOverviewPage() {
           </button>
         </div>
         <div className="flex flex-col">
-          {warehouseRows.map((row) => (
-            <WarehouseBar key={row.name} row={row} />
+          {warehouseRows.map((row, i) => (
+            <WarehouseBar key={row.name} row={row} index={i} />
           ))}
         </div>
       </div>

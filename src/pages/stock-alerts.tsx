@@ -85,7 +85,7 @@ function ThresholdBar({ percent, severity }: { percent: number; severity: AlertS
   return (
     <div className="flex flex-col gap-1">
       <div className="w-[120px] h-[6px] bg-[#E5E8DF] rounded-full overflow-hidden">
-        <div className="h-full rounded-full" style={{ width: `${percent}%`, background: barColor }} />
+        <div className="h-full rounded-full animate-bar-grow" style={{ width: `${percent}%`, background: barColor }} />
       </div>
       <span className="text-[12px] leading-[18px] font-medium" style={{ color: barColor }}>{percent}% of threshold</span>
     </div>
@@ -243,13 +243,13 @@ export function StockAlertsPage() {
 
       {/* 4 Summary Cards */}
       <div className="flex gap-4">
-        {alertSummary.map((card) => {
+        {alertSummary.map((card, i) => {
           const Icon = card.icon
           return (
             <div
               key={card.label}
-              className="flex-1 min-w-0 p-4 bg-white rounded-[12px] shadow-sm outline outline-1 flex flex-col gap-2"
-              style={{ outlineColor: card.borderColor }}
+              className="flex-1 min-w-0 p-4 bg-white rounded-[12px] shadow-sm outline outline-1 flex flex-col gap-2 hover-lift stagger-child"
+              style={{ outlineColor: card.borderColor, "--stagger-index": i } as React.CSSProperties}
             >
               <div className="flex items-center gap-2">
                 <div className="size-8 rounded-[8px] flex items-center justify-center" style={{ background: card.iconBg }}>
@@ -313,10 +313,11 @@ export function StockAlertsPage() {
             </p>
           </div>
         ) : (
-          filteredRows.map((row) => (
+          filteredRows.map((row, i) => (
             <div
               key={row.id}
-              className="bg-white rounded-[12px] shadow-sm outline outline-1 outline-[#E5E8DF] p-5 flex items-center gap-4"
+              className="bg-white rounded-[12px] shadow-sm outline outline-1 outline-[#E5E8DF] p-5 flex items-center gap-4 hover-lift stagger-child"
+              style={{ "--stagger-index": i } as React.CSSProperties}
             >
               <SeverityIcon severity={row.severity} />
               <div className="flex-1 flex flex-col gap-2">

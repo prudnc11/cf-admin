@@ -9,6 +9,7 @@ import {
   IconSettings,
   IconChevronDown,
   IconChevronRight,
+  IconUserDollar,
   type Icon,
 } from "@tabler/icons-react"
 
@@ -60,7 +61,8 @@ const menuItems: MenuItem[] = [
     items: [
       { title: "Overview" },
       { title: "Aggregation Planning" },
-      { title: "Procurement Request" },
+      { title: "Supply Requests" },
+      { title: "Supply Bids" },
       { title: "Inventory Overview" },
       { title: "Stock alerts" },
       { title: "Discrepancies" },
@@ -69,10 +71,18 @@ const menuItems: MenuItem[] = [
     ],
   },
   {
+    title: "Sales Admin",
+    icon: IconUserDollar,
+    items: [
+      { title: "SA Supply Requests" },
+    ],
+  },
+  {
     title: "Supply chain",
     icon: Icon3dRotate,
     items: [
-      { title: "Procurement Request" },
+      { title: "Supply Requests" },
+      { title: "Supply Bids" },
     ],
   },
   {

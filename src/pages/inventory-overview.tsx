@@ -169,7 +169,7 @@ function UtilizationBar({ percent }: { percent: number }) {
     <div className="flex items-center gap-2">
       <span className="text-[14px] leading-[20px] text-[#161D14]">{percent}%</span>
       <div className="w-[40px] h-[6px] bg-[#E5E8DF] rounded-full overflow-hidden">
-        <div className="h-full bg-[#71786C] rounded-full" style={{ width: `${percent}%` }} />
+        <div className="h-full bg-[#71786C] rounded-full animate-bar-grow" style={{ width: `${percent}%` }} />
       </div>
     </div>
   )
@@ -338,7 +338,7 @@ function InventoryDetailSheet({
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="flex-1 h-[12px] bg-[#E1E4DA] rounded-[4px] overflow-hidden">
-                      <div className="h-full rounded-[4px]" style={{ width: `${c.utilization}%`, background: c.barColor }} />
+                      <div className="h-full rounded-[4px] animate-bar-grow" style={{ width: `${c.utilization}%`, background: c.barColor }} />
                     </div>
                     <span className="text-[12px] leading-[18px] font-bold text-[#008744]">{c.utilization}%</span>
                   </div>
@@ -721,10 +721,10 @@ export function InventoryOverviewPage() {
 
       {/* 5 KPI Summary Cards */}
       <div className="flex gap-4">
-        {summaryCards.map((card) => {
+        {summaryCards.map((card, i) => {
           const Icon = card.icon
           return (
-            <div key={card.label} className="flex-1 min-w-0 p-4 bg-white rounded-[12px] shadow-sm outline outline-1 outline-[#E5E8DF] flex flex-col gap-2">
+            <div key={card.label} className="flex-1 min-w-0 p-4 bg-white rounded-[12px] shadow-sm outline outline-1 outline-[#E5E8DF] flex flex-col gap-2 hover-lift stagger-child" style={{ "--stagger-index": i } as React.CSSProperties}>
               <div className="flex items-center gap-2">
                 <div className="size-8 rounded-[8px] flex items-center justify-center" style={{ background: card.iconBg }}>
                   <Icon className="size-4" style={{ color: card.iconColor }} />

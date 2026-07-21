@@ -253,6 +253,10 @@ export function DisbursementPage({ onDetailViewChange, initialTab }: { onDetailV
   const { toast, showToast, dismissToast } = useToast()
 
   useEffect(() => {
+    if (initialTab) setActiveTab(initialTab)
+  }, [initialTab])
+
+  useEffect(() => {
     onDetailViewChange?.(!!selectedRequest)
   }, [selectedRequest, onDetailViewChange])
 
@@ -351,12 +355,13 @@ export function DisbursementPage({ onDetailViewChange, initialTab }: { onDetailV
 
       {/* Metric Cards */}
       <div className="grid gap-4 grid-cols-5">
-        {metricCards.map((card) => {
+        {metricCards.map((card, i) => {
           const Icon = card.icon
           return (
             <div
               key={card.label}
-              className="p-4 bg-white rounded-[12px] shadow-sm outline outline-1 outline-[#E5E8DF] flex flex-col gap-3"
+              className="p-4 bg-white rounded-[12px] shadow-sm outline outline-1 outline-[#E5E8DF] flex flex-col gap-3 hover-lift stagger-child"
+              style={{ "--stagger-index": i } as React.CSSProperties}
             >
               <div className="flex items-center gap-2">
                 <div className="p-1.5 rounded-md flex items-center" style={{ background: card.iconBg }}>
@@ -400,12 +405,13 @@ export function DisbursementPage({ onDetailViewChange, initialTab }: { onDetailV
       {/* Disbursement Cards */}
       <div className="flex flex-col gap-3">
         {filteredCards.map((item, i) => (
-          <DisbursementCardComponent
-            key={i}
-            item={item}
-            onOpen={() => setSelectedRequest(item.source)}
-            onAction={(type) => handleAction(type, item.source.requestId)}
-          />
+          <div key={i} className="stagger-child" style={{ "--stagger-index": i } as React.CSSProperties}>
+            <DisbursementCardComponent
+              item={item}
+              onOpen={() => setSelectedRequest(item.source)}
+              onAction={(type) => handleAction(type, item.source.requestId)}
+            />
+          </div>
         ))}
         {filteredCards.length === 0 && (
           <div className="flex items-center justify-center py-16 text-[14px] leading-[20px] text-[#525C4E]">
