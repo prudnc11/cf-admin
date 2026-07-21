@@ -103,6 +103,12 @@ export const supplyRequests: SupplyRequest[] = [
     createdBy: "Kofi Boateng", createdDate: "28 Jun 2026", linkedBids: 0,
   },
   {
+    id: "SR-2026-013", crop: "Sesame", variety: "White Sesame", quantity: "350", unit: "MT", region: "Northern Region",
+    budget: "GHS 3,500,000", aggregationWindow: "Jun 1 - Aug 31, 2026", status: "in-progress",
+    createdBy: "Ama Serwaa", createdDate: "20 May 2026", receivedBy: "Kwame Asante", receivedDate: "21 May 2026",
+    approvedBy: "Director Mensah", approvedDate: "22 May 2026", notes: "Export buyer contract — 6 aggregators accepted, parallel fulfilment", linkedBids: 6,
+  },
+  {
     id: "SR-2026-010", crop: "Groundnut", variety: "Chinese Groundnut", quantity: "180", unit: "MT", region: "Northern Region",
     budget: "GHS 360,000", aggregationWindow: "Aug 1 - Oct 31, 2026", status: "completed",
     createdBy: "Ama Serwaa", createdDate: "01 May 2026", receivedBy: "Kwame Asante", receivedDate: "02 May 2026",
@@ -481,7 +487,7 @@ export function SupplyRequestsPage({ onDetailViewChange, initialTab }: { onDetai
     <div className="flex flex-col gap-4">
       {/* Header with Create button */}
       <div className="flex items-center justify-between">
-        <h1 className="font-bold text-[28px] leading-[36px] text-[#161D14]">Supply Bids</h1>
+        <h1 className="font-bold text-[28px] leading-[36px] text-[#161D14]">Supply Requests</h1>
         <Button variant="primary" size="sm" onClick={() => setShowCreateModal(true)}>
           <IconPlus className="size-4" />
           Create Request

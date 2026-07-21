@@ -231,7 +231,7 @@ export function SupplyBidDetailPage({
           {/* Breadcrumb */}
           <div className="inline-flex items-center gap-[2px] py-[4px]">
             <button onClick={onBack} className="flex items-center gap-[2px] h-[22px] text-[16px] leading-[24px] font-bold text-[#36B92E] hover:text-[#2DA526] transition-colors">
-              {context === "disbursement" ? "Disbursement" : "Supply Requests"}
+              {context === "disbursement" ? "Disbursement" : "Bid Management"}
             </button>
             <div className="w-[20px] h-[20px] flex items-center justify-center">
               <IconChevronRight className="size-[20px] text-[#73796E]" />

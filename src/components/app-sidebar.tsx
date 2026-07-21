@@ -62,7 +62,7 @@ const menuItems: MenuItem[] = [
       { title: "Overview" },
       { title: "Aggregation Planning" },
       { title: "Supply Requests" },
-      { title: "Supply Bids" },
+      { title: "Bid Management" },
       { title: "Inventory Overview" },
       { title: "Stock alerts" },
       { title: "Discrepancies" },
@@ -82,7 +82,7 @@ const menuItems: MenuItem[] = [
     icon: Icon3dRotate,
     items: [
       { title: "Supply Requests" },
-      { title: "Supply Bids" },
+      { title: "Bid Management" },
     ],
   },
   {

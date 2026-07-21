@@ -24,7 +24,7 @@ import { AggregatorManagementPage } from "@/pages/aggregator-management"
 import { SalesAdminSupplyRequestsPage } from "@/pages/sales-admin-supply-requests"
 import { NotificationSheet } from "@/components/notification-sheet"
 
-const PAGES_WITHOUT_SUBHEADER = ["All requests", "Aggregator Management", "Supply Requests", "Supply Bids", "SA Supply Requests"]
+const PAGES_WITHOUT_SUBHEADER = ["All requests", "Aggregator Management", "Supply Requests", "Bid Management", "SA Supply Requests"]
 
 function App() {
   const [activeItem, setActiveItem] = useState("Dashboard")
@@ -38,7 +38,7 @@ function App() {
     setIsDetailView(false)
   }
 
-  const hideSubHeader = PAGES_WITHOUT_SUBHEADER.includes(activeItem) || ((activeItem === "Procurement Request" || activeItem === "Disbursement" || activeItem === "Supply Requests" || activeItem === "Supply Bids" || activeItem === "SA Supply Requests") && isDetailView)
+  const hideSubHeader = PAGES_WITHOUT_SUBHEADER.includes(activeItem) || ((activeItem === "Procurement Request" || activeItem === "Disbursement" || activeItem === "Supply Requests" || activeItem === "Bid Management" || activeItem === "SA Supply Requests") && isDetailView)
 
   return (
     <TooltipProvider>
@@ -106,8 +106,8 @@ function App() {
             {activeItem === "All requests" && <AllRequestsPage />}
             {activeItem === "Procurement Request" && <ProcurementRequestPage onDetailViewChange={setIsDetailView} initialTab={initialTab} />}
             {activeItem === "Disbursement" && <DisbursementPage onDetailViewChange={setIsDetailView} initialTab={initialTab} />}
-            {activeItem === "Supply Requests" && <SupplyBidsPage onDetailViewChange={setIsDetailView} initialTab={initialTab} />}
-            {activeItem === "Supply Bids" && <SupplyRequestsPage onDetailViewChange={setIsDetailView} initialTab={initialTab} />}
+            {activeItem === "Supply Requests" && <SupplyRequestsPage onDetailViewChange={setIsDetailView} initialTab={initialTab} />}
+            {activeItem === "Bid Management" && <SupplyBidsPage onDetailViewChange={setIsDetailView} initialTab={initialTab} />}
             {activeItem === "Overview" && <OperationsOverviewPage />}
             {activeItem === "Inventory Overview" && <InventoryOverviewPage />}
             {activeItem === "Stock alerts" && <StockAlertsPage />}

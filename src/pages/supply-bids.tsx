@@ -207,6 +207,78 @@ export const supplyBids: SupplyBid[] = [
     produceLabel: "Local", qaResult: "pass", financeStatus: "signed-off", grnNumber: "GRN-2026-005",
     routingDestination: "Accra Central Warehouse", aggregatorScore: 4.2,
   },
+  // --- SR-2026-013: Sesame 350 MT — 6 accepted bids at different pipeline stages ---
+  {
+    id: "BID-2026-016", supplyRequestId: "SR-2026-013", aggregator: "Gushegu Sesame Growers", crop: "Sesame", variety: "White Sesame",
+    quantity: "60", unit: "MT", pricePerUnit: "GHS 9,800/MT", totalValue: "GHS 588,000", deliveryMethod: "field-visit",
+    stage: "completed", submittedDate: "25 May 2026", pipeline: makePipeline(7),
+    negotiations: [
+      { by: "aggregator", price: "GHS 10,200/MT", date: "25 May 2026", note: "Initial offer" },
+      { by: "admin", price: "GHS 9,800/MT", date: "26 May 2026", note: "Aligned to export contract price" },
+      { by: "aggregator", price: "GHS 9,800/MT", date: "26 May 2026", note: "Accepted" },
+    ],
+    scheduledDate: "01 Jun 2026", region: "Northern Region", warehouse: "Gushegu Depot",
+    produceLabel: "Export", qaResult: "pass", financeStatus: "signed-off", grnNumber: "GRN-2026-012",
+    routingDestination: "Tema Port Warehouse", aggregatorScore: 4.5,
+  },
+  {
+    id: "BID-2026-017", supplyRequestId: "SR-2026-013", aggregator: "Karaga Farmers Union", crop: "Sesame", variety: "White Sesame",
+    quantity: "55", unit: "MT", pricePerUnit: "GHS 9,600/MT", totalValue: "GHS 528,000", deliveryMethod: "warehouse-visit",
+    stage: "routing", submittedDate: "26 May 2026", pipeline: makePipeline(6),
+    negotiations: [
+      { by: "aggregator", price: "GHS 9,900/MT", date: "26 May 2026" },
+      { by: "admin", price: "GHS 9,600/MT", date: "27 May 2026" },
+      { by: "aggregator", price: "GHS 9,600/MT", date: "27 May 2026", note: "Accepted" },
+    ],
+    scheduledDate: "03 Jun 2026", region: "Northern Region", warehouse: "Karaga Collection Point",
+    produceLabel: "Export", qaResult: "pass", financeStatus: "signed-off", grnNumber: "GRN-2026-014",
+  },
+  {
+    id: "BID-2026-018", supplyRequestId: "SR-2026-013", aggregator: "Savelugu Agric Coop", crop: "Sesame", variety: "White Sesame",
+    quantity: "70", unit: "MT", pricePerUnit: "GHS 9,700/MT", totalValue: "GHS 679,000", deliveryMethod: "field-visit",
+    stage: "grn", submittedDate: "27 May 2026", pipeline: makePipeline(5),
+    negotiations: [
+      { by: "aggregator", price: "GHS 10,000/MT", date: "27 May 2026" },
+      { by: "admin", price: "GHS 9,700/MT", date: "28 May 2026", note: "Best offer for this volume" },
+      { by: "aggregator", price: "GHS 9,700/MT", date: "28 May 2026", note: "Accepted" },
+    ],
+    scheduledDate: "05 Jun 2026", region: "Northern Region", warehouse: "Savelugu Depot",
+    produceLabel: "Export", qaResult: "pass", financeStatus: "signed-off",
+  },
+  {
+    id: "BID-2026-019", supplyRequestId: "SR-2026-013", aggregator: "Walewale Women Coop", crop: "Sesame", variety: "White Sesame",
+    quantity: "45", unit: "MT", pricePerUnit: "GHS 9,500/MT", totalValue: "GHS 427,500", deliveryMethod: "warehouse-visit",
+    stage: "finance", submittedDate: "28 May 2026", pipeline: makePipeline(4),
+    negotiations: [
+      { by: "aggregator", price: "GHS 9,500/MT", date: "28 May 2026", note: "Competitive offer, accepted immediately" },
+    ],
+    scheduledDate: "08 Jun 2026", region: "North East Region", warehouse: "Walewale Depot",
+    produceLabel: "Export", qaResult: "pass", financeStatus: "awaiting-review",
+  },
+  {
+    id: "BID-2026-020", supplyRequestId: "SR-2026-013", aggregator: "Bunkpurugu Growers", crop: "Sesame", variety: "White Sesame",
+    quantity: "80", unit: "MT", pricePerUnit: "GHS 9,850/MT", totalValue: "GHS 788,000", deliveryMethod: "warehouse-visit",
+    stage: "warehouse-qa", submittedDate: "29 May 2026", pipeline: makePipeline(3),
+    negotiations: [
+      { by: "aggregator", price: "GHS 10,100/MT", date: "29 May 2026" },
+      { by: "admin", price: "GHS 9,850/MT", date: "30 May 2026" },
+      { by: "aggregator", price: "GHS 9,850/MT", date: "30 May 2026", note: "Accepted" },
+    ],
+    scheduledDate: "10 Jun 2026", region: "North East Region", warehouse: "Bunkpurugu Warehouse",
+    produceLabel: "Export",
+  },
+  {
+    id: "BID-2026-021", supplyRequestId: "SR-2026-013", aggregator: "Yagaba Sesame Assoc", crop: "Sesame", variety: "White Sesame",
+    quantity: "40", unit: "MT", pricePerUnit: "GHS 9,650/MT", totalValue: "GHS 386,000", deliveryMethod: "field-visit",
+    stage: "field-qa", submittedDate: "30 May 2026", pipeline: makePipeline(3),
+    negotiations: [
+      { by: "aggregator", price: "GHS 9,900/MT", date: "30 May 2026" },
+      { by: "admin", price: "GHS 9,650/MT", date: "31 May 2026", note: "Final offer" },
+      { by: "aggregator", price: "GHS 9,650/MT", date: "31 May 2026", note: "Accepted" },
+    ],
+    scheduledDate: "12 Jun 2026", region: "Northern Region", warehouse: "Yagaba Collection Point",
+    produceLabel: "Export",
+  },
   {
     id: "BID-2026-014", supplyRequestId: "SR-2026-002", aggregator: "Assin Fosu Coop", crop: "Cocoa", variety: "Amelonado",
     quantity: "20", unit: "MT", pricePerUnit: "GHS 15,500/MT", totalValue: "GHS 310,000", deliveryMethod: "field-visit",
@@ -535,7 +607,7 @@ export function SupplyBidsPage({ onDetailViewChange, initialTab }: { onDetailVie
   return (
     <div className="flex flex-col gap-4">
       {/* Header */}
-      <h1 className="font-bold text-[28px] leading-[36px] text-[#161D14]">Supply Requests</h1>
+      <h1 className="font-bold text-[28px] leading-[36px] text-[#161D14]">Bid Management</h1>
 
       {/* Filter Bar */}
       <div className="flex items-center gap-4">
