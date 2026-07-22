@@ -23,6 +23,19 @@ import { useToast } from "@/hooks/use-toast"
 import { Toast } from "@/components/ui/toast"
 import { SupplyBidDetailPage } from "./supply-bid-detail"
 import type { BidModalType } from "./supply-bid-detail"
+import {
+  AcceptPriceModal,
+  CounterOfferModal,
+  BidScheduleVisitModal,
+  BidLogQAModal,
+  BidFinanceApproveModal,
+  BidFinanceRejectModal,
+  BidAttachProofModal,
+  BidFinanceSignoffModal,
+  BidGenerateGRNModal,
+  BidStartRoutingModal,
+  BidProduceLabelModal,
+} from "@/components/forms/bid-modals"
 
 // --- Types ---
 
@@ -81,6 +94,17 @@ function makePipeline(activeIndex: number, rejected = false): PipelineStep[] {
       : "pending" as const,
   }))
 }
+
+function stageToIndex(stage: BidStage): number {
+  const map: Record<BidStage, number> = {
+    "submitted": 0, "negotiation": 1, "scheduling": 2,
+    "field-qa": 3, "warehouse-qa": 3, "finance": 4,
+    "grn": 5, "routing": 6, "completed": 7, "rejected": -1,
+  }
+  return map[stage]
+}
+
+const today = () => new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
 
 // --- Mock Data ---
 
@@ -312,30 +336,6 @@ const filters = [
   { label: "All requests", icon: IconFileText },
 ]
 
-const tabItems = [
-  { label: "All Bids", badge: supplyBids.length },
-  { label: "Unassigned" },
-  { label: "Negotiation" },
-  { label: "Scheduling" },
-  { label: "QA" },
-  { label: "Finance" },
-  { label: "GRN" },
-  { label: "Routed" },
-  { label: "Rejected" },
-]
-
-const tabIcons: Record<string, typeof IconClipboardCheck> = {
-  "All Bids": IconClipboardCheck,
-  "Unassigned": IconInbox,
-  "Negotiation": IconMessages,
-  "Scheduling": IconCalendar,
-  "QA": IconClipboardCheck,
-  "Finance": IconCash,
-  "GRN": IconFileText,
-  "Routed": IconRoute,
-  "Rejected": IconX,
-}
-
 function stageToTab(stage: BidStage): string {
   switch (stage) {
     case "submitted": return "Unassigned"
@@ -348,15 +348,6 @@ function stageToTab(stage: BidStage): string {
     case "rejected": return "Rejected"
   }
 }
-
-const metricCards = [
-  { label: "Total Bids", value: String(supplyBids.length), iconBg: "#D5E6FD", iconColor: "#00439E", icon: IconClipboardCheck },
-  { label: "In Negotiation", value: String(supplyBids.filter(b => b.stage === "negotiation").length), iconBg: "#FEF0D8", iconColor: "#995917", icon: IconMessages },
-  { label: "Awaiting QA", value: String(supplyBids.filter(b => b.stage === "field-qa" || b.stage === "warehouse-qa").length), iconBg: "#D4F5D0", iconColor: "#1A5514", icon: IconClipboardCheck },
-  { label: "Awaiting Finance", value: String(supplyBids.filter(b => b.stage === "finance").length), iconBg: "#F3E8FD", iconColor: "#6B21A8", icon: IconCash },
-  { label: "GRN Pending", value: String(supplyBids.filter(b => b.stage === "grn").length), iconBg: "#D4F5D0", iconColor: "#1A5514", icon: IconFileText },
-  { label: "Completed", value: String(supplyBids.filter(b => b.stage === "completed").length), iconBg: "#D4F5D0", iconColor: "#1A5514", icon: IconCircleCheck },
-]
 
 // --- Status helpers ---
 
@@ -458,17 +449,68 @@ function PipelineStepper({ steps }: { steps: PipelineStep[] }) {
   )
 }
 
-function StageActions({ stage, onAction }: { stage: BidStage; onAction?: (type: BidModalType) => void }) {
+function StageActions({ bid, onAction }: { bid: SupplyBid; onAction?: (type: BidModalType) => void }) {
+  const { stage, financeStatus } = bid
   const actionMap: Record<string, { primary?: { label: string; modal: BidModalType }; secondary?: { label: string; modal: BidModalType } }> = {
-    "submitted": { primary: { label: "Assign to Request", modal: "accept-price" } },
+    "submitted": { primary: { label: "Accept Price", modal: "accept-price" }, secondary: { label: "Counter Offer", modal: "counter-offer" } },
     "negotiation": { primary: { label: "Accept Price", modal: "accept-price" }, secondary: { label: "Counter Offer", modal: "counter-offer" } },
     "scheduling": { primary: { label: "Schedule Visit", modal: "schedule-visit" } },
     "field-qa": { primary: { label: "Log Field QA", modal: "log-qa" } },
     "warehouse-qa": { primary: { label: "Log Warehouse QA", modal: "log-qa" } },
-    "finance": { primary: { label: "Approve Disbursement", modal: "finance-approve" }, secondary: { label: "Reject", modal: "finance-reject" } },
     "grn": { primary: { label: "Generate GRN", modal: "generate-grn" } },
     "routing": { primary: { label: "Start Routing", modal: "start-routing" } },
   }
+
+  // Finance has sub-states
+  if (stage === "finance") {
+    if (financeStatus === "awaiting-review") {
+      return (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={(e) => { e.stopPropagation(); onAction?.("finance-reject") }}
+            className="flex items-center gap-1.5 h-8 px-3 rounded-lg outline outline-1 outline-[#BA1A1A] text-[#BA1A1A] text-[13px] leading-[18px] font-bold hover:bg-[#FEE2E2] transition-colors"
+          >
+            Reject
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onAction?.("finance-approve") }}
+            className="flex items-center gap-1.5 h-8 px-3 rounded-lg bg-[#36B92E] text-white text-[13px] leading-[18px] font-bold hover:bg-[#5EC758] transition-colors"
+          >
+            Approve
+            <IconChevronRight className="size-3.5" />
+          </button>
+        </div>
+      )
+    }
+    if (financeStatus === "pending-proof") {
+      return (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={(e) => { e.stopPropagation(); onAction?.("attach-proof") }}
+            className="flex items-center gap-1.5 h-8 px-3 rounded-lg bg-[#36B92E] text-white text-[13px] leading-[18px] font-bold hover:bg-[#5EC758] transition-colors"
+          >
+            Attach Proof
+            <IconChevronRight className="size-3.5" />
+          </button>
+        </div>
+      )
+    }
+    if (financeStatus === "awaiting-signoff") {
+      return (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={(e) => { e.stopPropagation(); onAction?.("finance-signoff") }}
+            className="flex items-center gap-1.5 h-8 px-3 rounded-lg bg-[#36B92E] text-white text-[13px] leading-[18px] font-bold hover:bg-[#5EC758] transition-colors"
+          >
+            Sign Off
+            <IconChevronRight className="size-3.5" />
+          </button>
+        </div>
+      )
+    }
+    return null
+  }
+
   const actions = actionMap[stage]
   if (!actions) return null
   return (
@@ -510,6 +552,12 @@ function BidCardComponent({ bid, onOpen, onAction }: { bid: SupplyBid; onOpen: (
               </span>
               <StatusBadge label={stageLabel(bid.stage)} color={stageColor(bid.stage)} />
               {bid.produceLabel && <ProduceLabel label={bid.produceLabel} />}
+              {bid.stage === "finance" && bid.financeStatus && (
+                <StatusBadge
+                  label={bid.financeStatus === "awaiting-review" ? "Awaiting Review" : bid.financeStatus === "pending-proof" ? "Pending Proof" : bid.financeStatus === "awaiting-signoff" ? "Awaiting Sign-off" : bid.financeStatus === "signed-off" ? "Signed Off" : "Rejected"}
+                  color={bid.financeStatus === "signed-off" ? "green" : bid.financeStatus === "rejected" ? "red" : "warning"}
+                />
+              )}
             </div>
             <p className="text-[12px] leading-[18px] font-normal text-[#71786C]">
               {bid.aggregator} <span className="font-bold"> • </span>
@@ -545,7 +593,7 @@ function BidCardComponent({ bid, onOpen, onAction }: { bid: SupplyBid; onOpen: (
                 </span>
               )}
             </div>
-            <StageActions stage={bid.stage} onAction={onAction} />
+            <StageActions bid={bid} onAction={onAction} />
           </div>
         </>
       )}
@@ -555,54 +603,319 @@ function BidCardComponent({ bid, onOpen, onAction }: { bid: SupplyBid; onOpen: (
 
 // --- Main Page ---
 
+type ModalState = {
+  type: BidModalType | "produce-label"
+  bidId: string
+} | null
+
 export function SupplyBidsPage({ onDetailViewChange, initialTab }: { onDetailViewChange?: (v: boolean) => void; initialTab?: string }) {
+  const [bids, setBids] = useState<SupplyBid[]>(supplyBids)
   const [activeTab, setActiveTab] = useState(initialTab || "All Bids")
   const [rowsPerPage, setRowsPerPage] = useState(10)
-  const [selectedBid, setSelectedBid] = useState<SupplyBid | null>(null)
+  const [selectedBidId, setSelectedBidId] = useState<string | null>(null)
+  const [modalState, setModalState] = useState<ModalState>(null)
   const { toast, showToast, dismissToast } = useToast()
+
+  const selectedBid = selectedBidId ? bids.find(b => b.id === selectedBidId) ?? null : null
 
   useEffect(() => {
     if (initialTab) setActiveTab(initialTab)
   }, [initialTab])
 
   useEffect(() => {
-    onDetailViewChange?.(!!selectedBid)
-  }, [selectedBid, onDetailViewChange])
+    onDetailViewChange?.(!!selectedBidId)
+  }, [selectedBidId, onDetailViewChange])
 
-  const handleAction = (type: BidModalType) => {
-    const messages: Record<string, string> = {
-      "counter-offer": "Counter offer sent",
-      "accept-price": "Price accepted",
-      "schedule-visit": "Visit scheduled",
-      "approve-date": "Date approved",
-      "log-qa": "QA logged successfully",
-      "finance-approve": "Disbursement approved",
-      "finance-reject": "Disbursement rejected",
-      "attach-proof": "Proof attached",
-      "finance-signoff": "Finance signed off",
-      "generate-grn": "GRN generated",
-      "start-routing": "Routing started",
-    }
-    showToast(messages[type] || "Action completed")
+  // --- Bid mutation helper ---
+  const updateBid = (bidId: string, updater: (bid: SupplyBid) => SupplyBid) => {
+    setBids(prev => prev.map(b => b.id === bidId ? updater(b) : b))
   }
 
-  // Detail view
+  const modalBid = modalState ? bids.find(b => b.id === modalState.bidId) ?? null : null
+
+  // --- Open modal from card or detail actions ---
+  const openModal = (bidId: string, type: BidModalType) => {
+    setModalState({ type, bidId })
+  }
+
+  // --- State transition handlers ---
+
+  const handleAcceptPrice = () => {
+    if (!modalState) return
+    updateBid(modalState.bidId, (b) => ({
+      ...b,
+      stage: "scheduling",
+      pipeline: makePipeline(stageToIndex("scheduling")),
+      negotiations: [
+        ...b.negotiations,
+        { by: "admin" as const, price: b.negotiations.length > 0 ? b.negotiations[b.negotiations.length - 1].price : b.pricePerUnit, date: today(), note: "Price accepted" },
+      ],
+    }))
+    setModalState(null)
+    showToast("Price accepted — bid moved to Scheduling")
+  }
+
+  const handleCounterOffer = (data: { price: string; note: string }) => {
+    if (!modalState) return
+    updateBid(modalState.bidId, (b) => ({
+      ...b,
+      stage: "negotiation",
+      pipeline: makePipeline(stageToIndex("negotiation")),
+      negotiations: [
+        ...b.negotiations,
+        { by: "admin" as const, price: data.price, date: today(), note: data.note || undefined },
+      ],
+    }))
+    setModalState(null)
+    showToast("Counter offer sent to aggregator")
+  }
+
+  const handleScheduleVisit = (data: { date: string; teamType: string; assignedTo: string; schedulePickup: boolean }) => {
+    if (!modalState || !modalBid) return
+    const nextStage: BidStage = modalBid.deliveryMethod === "field-visit" ? "field-qa" : "warehouse-qa"
+    updateBid(modalState.bidId, (b) => ({
+      ...b,
+      stage: nextStage,
+      pipeline: makePipeline(stageToIndex(nextStage)),
+      scheduledDate: new Date(data.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+      scheduledVisitType: data.teamType,
+    }))
+    setModalState(null)
+    showToast("Visit scheduled — bid moved to QA")
+  }
+
+  const handleLogQA = (data: { result: "pass" | "fail"; grade: string; moisture: string; notes: string }) => {
+    if (!modalState) return
+    if (data.result === "fail") {
+      updateBid(modalState.bidId, (b) => ({
+        ...b,
+        stage: "rejected",
+        pipeline: makePipeline(stageToIndex(b.stage), true),
+        qaResult: "fail",
+      }))
+      setModalState(null)
+      showToast("QA failed — bid rejected")
+    } else {
+      // QA passed — show produce label modal
+      updateBid(modalState.bidId, (b) => ({
+        ...b,
+        qaResult: "pass",
+      }))
+      setModalState({ type: "produce-label", bidId: modalState.bidId })
+    }
+  }
+
+  const handleProduceLabel = (data: { label: "Local" | "Export" | "Both" }) => {
+    if (!modalState) return
+    updateBid(modalState.bidId, (b) => ({
+      ...b,
+      stage: "finance",
+      pipeline: makePipeline(stageToIndex("finance")),
+      produceLabel: data.label,
+      financeStatus: "awaiting-review",
+    }))
+    setModalState(null)
+    showToast("QA passed — bid moved to Finance")
+  }
+
+  const handleFinanceApprove = () => {
+    if (!modalState) return
+    updateBid(modalState.bidId, (b) => ({
+      ...b,
+      financeStatus: "pending-proof",
+    }))
+    setModalState(null)
+    showToast("Disbursement approved — attach proof of payment")
+  }
+
+  const handleFinanceReject = (_data: { reason: string }) => {
+    if (!modalState) return
+    updateBid(modalState.bidId, (b) => ({
+      ...b,
+      stage: "rejected",
+      pipeline: makePipeline(stageToIndex("finance"), true),
+      financeStatus: "rejected",
+    }))
+    setModalState(null)
+    showToast("Disbursement rejected — bid cancelled")
+  }
+
+  const handleAttachProof = () => {
+    if (!modalState) return
+    updateBid(modalState.bidId, (b) => ({
+      ...b,
+      financeStatus: "awaiting-signoff",
+    }))
+    setModalState(null)
+    showToast("Proof attached — awaiting sign-off")
+  }
+
+  const handleFinanceSignoff = () => {
+    if (!modalState) return
+    updateBid(modalState.bidId, (b) => ({
+      ...b,
+      stage: "grn",
+      pipeline: makePipeline(stageToIndex("grn")),
+      financeStatus: "signed-off",
+    }))
+    setModalState(null)
+    showToast("Finance signed off — generate GRN next")
+  }
+
+  const handleGenerateGRN = () => {
+    if (!modalState) return
+    const grnNum = `GRN-2026-${String(Math.floor(Math.random() * 900) + 100).padStart(3, "0")}`
+    updateBid(modalState.bidId, (b) => ({
+      ...b,
+      stage: "routing",
+      pipeline: makePipeline(stageToIndex("routing")),
+      grnNumber: grnNum,
+    }))
+    setModalState(null)
+    showToast(`GRN ${grnNum} generated — start routing`)
+  }
+
+  const handleStartRouting = (data: { routingMethod: string }) => {
+    if (!modalState) return
+    const dest = data.routingMethod === "dispatch" ? "Direct dispatch to buyer" : "Accra Central Warehouse"
+    updateBid(modalState.bidId, (b) => ({
+      ...b,
+      stage: "completed",
+      pipeline: makePipeline(stageToIndex("completed")),
+      routingDestination: dest,
+      aggregatorScore: +(Math.random() * 1.5 + 3.5).toFixed(1),
+    }))
+    setModalState(null)
+    showToast("Routing complete — bid fulfilled!")
+  }
+
+  // --- Dynamic metrics ---
+  const tabItems = [
+    { label: "All Bids", badge: bids.length },
+    { label: "Unassigned" },
+    { label: "Negotiation" },
+    { label: "Scheduling" },
+    { label: "QA" },
+    { label: "Finance" },
+    { label: "GRN" },
+    { label: "Routed" },
+    { label: "Rejected" },
+  ]
+
+  const tabIcons: Record<string, typeof IconClipboardCheck> = {
+    "All Bids": IconClipboardCheck,
+    "Unassigned": IconInbox,
+    "Negotiation": IconMessages,
+    "Scheduling": IconCalendar,
+    "QA": IconClipboardCheck,
+    "Finance": IconCash,
+    "GRN": IconFileText,
+    "Routed": IconRoute,
+    "Rejected": IconX,
+  }
+
+  const metricCards = [
+    { label: "Total Bids", value: String(bids.length), iconBg: "#D5E6FD", iconColor: "#00439E", icon: IconClipboardCheck },
+    { label: "In Negotiation", value: String(bids.filter(b => b.stage === "negotiation").length), iconBg: "#FEF0D8", iconColor: "#995917", icon: IconMessages },
+    { label: "Awaiting QA", value: String(bids.filter(b => b.stage === "field-qa" || b.stage === "warehouse-qa").length), iconBg: "#D4F5D0", iconColor: "#1A5514", icon: IconClipboardCheck },
+    { label: "Awaiting Finance", value: String(bids.filter(b => b.stage === "finance").length), iconBg: "#F3E8FD", iconColor: "#6B21A8", icon: IconCash },
+    { label: "GRN Pending", value: String(bids.filter(b => b.stage === "grn").length), iconBg: "#D4F5D0", iconColor: "#1A5514", icon: IconFileText },
+    { label: "Completed", value: String(bids.filter(b => b.stage === "completed").length), iconBg: "#D4F5D0", iconColor: "#1A5514", icon: IconCircleCheck },
+  ]
+
+  // --- Detail view ---
   if (selectedBid) {
     return (
       <>
         <SupplyBidDetailPage
-          onBack={() => setSelectedBid(null)}
+          onBack={() => setSelectedBidId(null)}
           bid={selectedBid}
-          onAction={handleAction}
+          onAction={(type) => openModal(selectedBid.id, type)}
         />
+        {/* Render modals in detail view too */}
+        {modalBid && renderModals()}
         {toast && <Toast message={toast} onDismiss={dismissToast} />}
       </>
     )
   }
 
   const filteredBids = activeTab === "All Bids"
-    ? supplyBids
-    : supplyBids.filter(b => stageToTab(b.stage) === activeTab)
+    ? bids
+    : bids.filter(b => stageToTab(b.stage) === activeTab)
+
+  function renderModals() {
+    if (!modalBid || !modalState) return null
+    return (
+      <>
+        <AcceptPriceModal
+          open={modalState.type === "accept-price"}
+          onOpenChange={(v) => !v && setModalState(null)}
+          bid={modalBid}
+          onSubmit={handleAcceptPrice}
+        />
+        <CounterOfferModal
+          open={modalState.type === "counter-offer"}
+          onOpenChange={(v) => !v && setModalState(null)}
+          bid={modalBid}
+          onSubmit={handleCounterOffer}
+        />
+        <BidScheduleVisitModal
+          open={modalState.type === "schedule-visit" || modalState.type === "approve-date"}
+          onOpenChange={(v) => !v && setModalState(null)}
+          bid={modalBid}
+          onSubmit={handleScheduleVisit}
+        />
+        <BidLogQAModal
+          open={modalState.type === "log-qa"}
+          onOpenChange={(v) => !v && setModalState(null)}
+          bid={modalBid}
+          onSubmit={handleLogQA}
+        />
+        <BidProduceLabelModal
+          open={modalState.type === "produce-label"}
+          onOpenChange={(v) => !v && setModalState(null)}
+          bid={modalBid}
+          onSubmit={handleProduceLabel}
+        />
+        <BidFinanceApproveModal
+          open={modalState.type === "finance-approve"}
+          onOpenChange={(v) => !v && setModalState(null)}
+          bid={modalBid}
+          onSubmit={handleFinanceApprove}
+        />
+        <BidFinanceRejectModal
+          open={modalState.type === "finance-reject"}
+          onOpenChange={(v) => !v && setModalState(null)}
+          bid={modalBid}
+          onSubmit={handleFinanceReject}
+        />
+        <BidAttachProofModal
+          open={modalState.type === "attach-proof"}
+          onOpenChange={(v) => !v && setModalState(null)}
+          bid={modalBid}
+          onSubmit={handleAttachProof}
+        />
+        <BidFinanceSignoffModal
+          open={modalState.type === "finance-signoff"}
+          onOpenChange={(v) => !v && setModalState(null)}
+          bid={modalBid}
+          onSubmit={handleFinanceSignoff}
+        />
+        <BidGenerateGRNModal
+          open={modalState.type === "generate-grn"}
+          onOpenChange={(v) => !v && setModalState(null)}
+          bid={modalBid}
+          onSubmit={handleGenerateGRN}
+        />
+        <BidStartRoutingModal
+          open={modalState.type === "start-routing"}
+          onOpenChange={(v) => !v && setModalState(null)}
+          bid={modalBid}
+          onSubmit={handleStartRouting}
+        />
+      </>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -669,8 +982,8 @@ export function SupplyBidsPage({ onDetailViewChange, initialTab }: { onDetailVie
           <div key={bid.id} className="stagger-child" style={{ "--stagger-index": i } as React.CSSProperties}>
             <BidCardComponent
               bid={bid}
-              onOpen={() => setSelectedBid(bid)}
-              onAction={handleAction}
+              onOpen={() => setSelectedBidId(bid.id)}
+              onAction={(type) => openModal(bid.id, type)}
             />
           </div>
         ))}
@@ -705,6 +1018,9 @@ export function SupplyBidsPage({ onDetailViewChange, initialTab }: { onDetailVie
           </div>
         </div>
       </div>
+
+      {/* Modals */}
+      {renderModals()}
 
       {toast && <Toast message={toast} onDismiss={dismissToast} />}
     </div>

@@ -173,6 +173,20 @@ export function SupplyBidDetailPage({
 
   // Action buttons based on stage
   const actionButtons = () => {
+    if (bid.stage === "submitted") {
+      return (
+        <>
+          <button onClick={() => onAction?.("counter-offer")} className={outlineBtnClass}>
+            <IconMessages className="size-[16px]" />
+            Counter Offer
+          </button>
+          <button onClick={() => onAction?.("accept-price")} className={primaryBtnClass}>
+            <IconCheck className="size-[16px]" />
+            Accept Price
+          </button>
+        </>
+      )
+    }
     if (bid.stage === "negotiation") {
       return (
         <>
@@ -189,9 +203,9 @@ export function SupplyBidDetailPage({
     }
     if (bid.stage === "scheduling") {
       return (
-        <button onClick={() => onAction?.(bid.deliveryMethod === "field-visit" ? "schedule-visit" : "approve-date")} className={primaryBtnClass}>
+        <button onClick={() => onAction?.("schedule-visit")} className={primaryBtnClass}>
           <IconCalendar className="size-[16px]" />
-          {bid.deliveryMethod === "field-visit" ? "Schedule Field Visit" : "Approve Delivery Date"}
+          {bid.deliveryMethod === "field-visit" ? "Schedule Field Visit" : "Schedule Warehouse Delivery"}
         </button>
       )
     }
@@ -202,6 +216,38 @@ export function SupplyBidDetailPage({
           Log QA
         </button>
       )
+    }
+    if (bid.stage === "finance") {
+      if (bid.financeStatus === "awaiting-review") {
+        return (
+          <>
+            <button onClick={() => onAction?.("finance-reject")} className="inline-flex items-center gap-[8px] h-[36px] px-[12px] py-[8px] rounded-[8px] outline outline-1 outline-[#BA1A1A] text-[#BA1A1A] text-[14px] leading-[20px] font-bold hover:bg-[#FEE2E2] transition-colors">
+              <IconX className="size-[16px]" />
+              Reject
+            </button>
+            <button onClick={() => onAction?.("finance-approve")} className={primaryBtnClass}>
+              <IconCheck className="size-[16px]" />
+              Approve Disbursement
+            </button>
+          </>
+        )
+      }
+      if (bid.financeStatus === "pending-proof") {
+        return (
+          <button onClick={() => onAction?.("attach-proof")} className={primaryBtnClass}>
+            Attach Proof of Payment
+          </button>
+        )
+      }
+      if (bid.financeStatus === "awaiting-signoff") {
+        return (
+          <button onClick={() => onAction?.("finance-signoff")} className={primaryBtnClass}>
+            <IconCheck className="size-[16px]" />
+            Sign Off
+          </button>
+        )
+      }
+      return null
     }
     if (bid.stage === "grn") {
       return (
@@ -417,7 +463,7 @@ export function SupplyBidDetailPage({
                             className="flex items-center gap-1.5 h-9 px-4 rounded-lg bg-[#36B92E] text-white text-[14px] leading-[20px] font-bold hover:bg-[#5EC758] transition-colors"
                           >
                             <IconCheck className="size-4" />
-                            Approve Disbursement
+                            Approve
                           </button>
                         </>
                       )}
@@ -426,7 +472,7 @@ export function SupplyBidDetailPage({
                           onClick={() => onAction?.("attach-proof")}
                           className="flex items-center gap-1.5 h-9 px-4 rounded-lg bg-[#36B92E] text-white text-[14px] leading-[20px] font-bold hover:bg-[#5EC758] transition-colors"
                         >
-                          Attach Proof of Payment
+                          Attach Proof
                         </button>
                       )}
                       {bid.financeStatus === "awaiting-signoff" && (
