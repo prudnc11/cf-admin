@@ -127,23 +127,16 @@ export const supplyRequests: SupplyRequest[] = [
   },
 ]
 
+// --- Helpers ---
+
+const today = () => new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+
 // --- Data ---
 
 const filters = [
   { label: "All time", icon: IconCalendar },
   { label: "All regions", icon: IconWorld },
   { label: "All commodities", icon: IconWorld },
-]
-
-const tabItems = [
-  { label: "All", badge: supplyRequests.length },
-  { label: "Draft" },
-  { label: "Pending Receipt" },
-  { label: "Received" },
-  { label: "Active" },
-  { label: "In Progress" },
-  { label: "Completed" },
-  { label: "Cancelled" },
 ]
 
 const tabIcons: Record<string, typeof IconClipboardCheck> = {
@@ -168,15 +161,7 @@ const statusToTab: Record<SupplyRequestStatus, string> = {
   "rejected": "Cancelled",
 }
 
-const metricCards = [
-  { label: "Total Requests", value: String(supplyRequests.length), iconBg: "#D5E6FD", iconColor: "#00439E", icon: IconClipboardCheck },
-  { label: "Pending Receipt", value: String(supplyRequests.filter(r => r.status === "pending-receipt").length), iconBg: "#FEF0D8", iconColor: "#995917", icon: IconClock },
-  { label: "Active", value: String(supplyRequests.filter(r => r.status === "active").length), iconBg: "#D4F5D0", iconColor: "#1A5514", icon: IconPlayerPlay },
-  { label: "In Progress", value: String(supplyRequests.filter(r => r.status === "in-progress").length), iconBg: "#D5E6FD", iconColor: "#00439E", icon: IconLoader },
-  { label: "Completed", value: String(supplyRequests.filter(r => r.status === "completed").length), iconBg: "#D4F5D0", iconColor: "#1A5514", icon: IconCircleCheck },
-]
-
-// --- Status color mapping ---
+// --- Status helpers ---
 
 function statusColor(s: SupplyRequestStatus): "green" | "blue" | "red" | "warning" {
   switch (s) {
@@ -319,12 +304,12 @@ function RequestCardComponent({ request, onAction, onOpen }: { request: SupplyRe
                   className="flex items-center gap-1.5 h-8 px-3 rounded-lg bg-[#36B92E] text-white text-[13px] leading-[18px] font-bold hover:bg-[#5EC758] transition-colors"
                 >
                   <IconCheck className="size-3.5" />
-                  Activate
+                  Approve & Activate
                 </button>
               </>
             )}
             {request.status === "active" && (
-              <span className="text-[13px] leading-[18px] text-[#525C4E] italic">Awaiting bids...</span>
+              <span className="text-[13px] leading-[18px] text-[#525C4E] italic">Published to aggregators — awaiting bids...</span>
             )}
             {request.status === "in-progress" && request.linkedBids > 0 && (
               <span className="text-[13px] leading-[18px] text-[#00439E] font-bold">{request.linkedBids} active bids</span>
@@ -336,7 +321,7 @@ function RequestCardComponent({ request, onAction, onOpen }: { request: SupplyRe
   )
 }
 
-function CreateRequestModal({ open, onClose, onSubmit }: { open: boolean; onClose: () => void; onSubmit: () => void }) {
+function CreateRequestModal({ open, onClose, onSubmit }: { open: boolean; onClose: () => void; onSubmit: (data: { crop: string; variety: string; quantity: string; unit: string; region: string; budget: string; windowStart: string; windowEnd: string; notes: string }) => void }) {
   const [crop, setCrop] = useState("")
   const [variety, setVariety] = useState("")
   const [quantity, setQuantity] = useState("")
@@ -350,7 +335,7 @@ function CreateRequestModal({ open, onClose, onSubmit }: { open: boolean; onClos
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!crop || !quantity || !region) return
-    onSubmit()
+    onSubmit({ crop, variety, quantity, unit, region, budget, windowStart, windowEnd, notes })
     setCrop(""); setVariety(""); setQuantity(""); setUnit("MT"); setRegion(""); setBudget(""); setWindowStart(""); setWindowEnd(""); setNotes("")
   }
 
@@ -369,7 +354,7 @@ function CreateRequestModal({ open, onClose, onSubmit }: { open: boolean; onClos
                   <label className={labelClass}>Crop *</label>
                   <select value={crop} onChange={(e) => setCrop(e.target.value)} className={inputClass}>
                     <option value="">Select crop</option>
-                    {["Rice", "Cocoa", "Maize", "Shea", "Cashew", "Sorghum", "Cassava", "Yam", "Millet", "Groundnut", "Soybean", "Cowpea"].map(c => (
+                    {["Rice", "Cocoa", "Maize", "Shea", "Cashew", "Sorghum", "Cassava", "Yam", "Millet", "Groundnut", "Soybean", "Cowpea", "Sesame"].map(c => (
                       <option key={c} value={c}>{c}</option>
                     ))}
                   </select>
@@ -398,7 +383,7 @@ function CreateRequestModal({ open, onClose, onSubmit }: { open: boolean; onClos
                   <label className={labelClass}>Region *</label>
                   <select value={region} onChange={(e) => setRegion(e.target.value)} className={inputClass}>
                     <option value="">Select region</option>
-                    {["Volta Region", "Ashanti Region", "Brong-Ahafo Region", "Northern Region", "Upper East Region", "Upper West Region", "Eastern Region", "Bono Region", "Savannah Region", "Bono East Region"].map(r => (
+                    {["Volta Region", "Ashanti Region", "Brong-Ahafo Region", "Northern Region", "Upper East Region", "Upper West Region", "Eastern Region", "Bono Region", "Savannah Region", "Bono East Region", "North East Region", "Western North Region", "Central Region"].map(r => (
                       <option key={r} value={r}>{r}</option>
                     ))}
                   </select>
@@ -437,51 +422,232 @@ function CreateRequestModal({ open, onClose, onSubmit }: { open: boolean; onClos
   )
 }
 
+// --- Confirmation Modals ---
+
+function ConfirmModal({ open, onClose, onConfirm, title, description, confirmLabel, variant = "primary" }: {
+  open: boolean; onClose: () => void; onConfirm: () => void; title: string; description: string; confirmLabel: string; variant?: "primary" | "destructive"
+}) {
+  return (
+    <Modal open={open} onOpenChange={(o) => !o && onClose()}>
+      <ModalContent>
+        <form onSubmit={(e) => { e.preventDefault(); onConfirm() }}>
+          <ModalHeader title={title} onClose={onClose} />
+          <ModalBody>
+            <p className="text-[14px] leading-[20px] text-[#525C4E]">{description}</p>
+          </ModalBody>
+          <ModalFooter>
+            <Button type="button" variant="secondary" size="md" shape="rect" onClick={onClose}>Cancel</Button>
+            <Button type="submit" variant={variant} size="md" shape="rect">{confirmLabel}</Button>
+          </ModalFooter>
+        </form>
+      </ModalContent>
+    </Modal>
+  )
+}
+
+function RejectModal({ open, onClose, onConfirm }: { open: boolean; onClose: () => void; onConfirm: (reason: string) => void }) {
+  const [reason, setReason] = useState("")
+  return (
+    <Modal open={open} onOpenChange={(o) => !o && onClose()}>
+      <ModalContent>
+        <form onSubmit={(e) => { e.preventDefault(); if (reason.trim()) { onConfirm(reason); setReason("") } }}>
+          <ModalHeader title="Reject Supply Request" onClose={onClose} />
+          <ModalBody>
+            <div className="flex flex-col gap-4">
+              <div className="p-4 bg-[#FEF0D8] rounded-[12px] flex items-start gap-2">
+                <IconX className="size-5 text-[#995917] shrink-0 mt-0.5" />
+                <p className="text-[14px] leading-[20px] text-[#995917]">
+                  Rejecting this request will prevent it from being published to aggregators. The Sales Admin who created it will be notified.
+                </p>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[14px] leading-[20px] font-bold text-[#161D14]">Reason for rejection *</label>
+                <textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Explain why this request is being rejected..." rows={3} className="w-full px-3 py-2 rounded-lg outline outline-1 outline-[#E5E8DF] bg-white text-[14px] leading-[20px] text-[#161D14] placeholder:text-[#525C4E] focus:outline-[#36B92E] resize-none" />
+              </div>
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <Button type="button" variant="secondary" size="md" shape="rect" onClick={onClose}>Cancel</Button>
+            <Button type="submit" variant="destructive" size="md" shape="rect" disabled={!reason.trim()}>
+              <IconX className="size-4" />
+              Reject Request
+            </Button>
+          </ModalFooter>
+        </form>
+      </ModalContent>
+    </Modal>
+  )
+}
+
 // --- Main Page ---
 
+type ModalAction = { type: "submit" | "receive" | "return" | "activate"; requestId: string } | { type: "reject"; requestId: string } | null
+
 export function SupplyRequestsPage({ onDetailViewChange, initialTab }: { onDetailViewChange?: (v: boolean) => void; initialTab?: string }) {
+  const [requests, setRequests] = useState<SupplyRequest[]>(supplyRequests)
   const [activeTab, setActiveTab] = useState(initialTab || "All")
   const [rowsPerPage, setRowsPerPage] = useState(10)
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [selectedRequest, setSelectedRequest] = useState<SupplyRequest | null>(null)
+  const [modalAction, setModalAction] = useState<ModalAction>(null)
   const { toast, showToast, dismissToast } = useToast()
+
+  const selectedRequest = selectedRequestId ? requests.find(r => r.id === selectedRequestId) ?? null : null
 
   useEffect(() => {
     if (initialTab) setActiveTab(initialTab)
   }, [initialTab])
 
   useEffect(() => {
-    onDetailViewChange?.(!!selectedRequest)
-  }, [selectedRequest, onDetailViewChange])
+    onDetailViewChange?.(!!selectedRequestId)
+  }, [selectedRequestId, onDetailViewChange])
 
-  const handleAction = (action: string, req: SupplyRequest) => {
-    const messages: Record<string, string> = {
-      submit: `${req.id} submitted for review`,
-      receive: `${req.id} received successfully`,
-      return: `${req.id} returned to Sales Admin`,
-      activate: `${req.id} activated - aggregators can now submit bids`,
-      reject: `${req.id} rejected`,
-    }
-    showToast(messages[action] || `Action "${action}" completed for ${req.id}`)
+  // --- Mutation helper ---
+  const updateRequest = (id: string, updater: (r: SupplyRequest) => SupplyRequest) => {
+    setRequests(prev => prev.map(r => r.id === id ? updater(r) : r))
   }
 
-  // Detail view
+  // --- Action handlers ---
+  const handleAction = (action: string, req: SupplyRequest) => {
+    if (action === "reject") {
+      setModalAction({ type: "reject", requestId: req.id })
+    } else {
+      setModalAction({ type: action as "submit" | "receive" | "return" | "activate", requestId: req.id })
+    }
+  }
+
+  const confirmAction = () => {
+    if (!modalAction) return
+    const { type, requestId } = modalAction
+
+    if (type === "submit") {
+      updateRequest(requestId, (r) => ({ ...r, status: "pending-receipt" }))
+      showToast(`${requestId} submitted for Operations review`)
+    } else if (type === "receive") {
+      updateRequest(requestId, (r) => ({
+        ...r,
+        status: "received",
+        receivedBy: "Kwame Asante",
+        receivedDate: today(),
+      }))
+      showToast(`${requestId} received — ready for approval`)
+    } else if (type === "return") {
+      updateRequest(requestId, (r) => ({
+        ...r,
+        status: "draft",
+        receivedBy: undefined,
+        receivedDate: undefined,
+      }))
+      showToast(`${requestId} returned to Sales Admin`)
+    } else if (type === "activate") {
+      updateRequest(requestId, (r) => ({
+        ...r,
+        status: "active",
+        approvedBy: "Director Mensah",
+        approvedDate: today(),
+      }))
+      showToast(`${requestId} approved & activated — published to aggregators`)
+    }
+
+    setModalAction(null)
+  }
+
+  const confirmReject = (reason: string) => {
+    if (!modalAction) return
+    updateRequest(modalAction.requestId, (r) => ({
+      ...r,
+      status: "rejected",
+      notes: reason,
+    }))
+    showToast(`${modalAction.requestId} rejected`)
+    setModalAction(null)
+  }
+
+  // --- Create handler ---
+  const handleCreate = (data: { crop: string; variety: string; quantity: string; unit: string; region: string; budget: string; windowStart: string; windowEnd: string; notes: string }) => {
+    const newId = `SR-2026-${String(requests.length + 1).padStart(3, "0")}`
+    const windowLabel = data.windowStart && data.windowEnd
+      ? `${new Date(data.windowStart).toLocaleDateString("en-GB", { month: "short", day: "numeric" })} - ${new Date(data.windowEnd).toLocaleDateString("en-GB", { month: "short", day: "numeric", year: "numeric" })}`
+      : "TBD"
+    const newRequest: SupplyRequest = {
+      id: newId,
+      crop: data.crop,
+      variety: data.variety || data.crop,
+      quantity: data.quantity,
+      unit: data.unit,
+      region: data.region,
+      budget: data.budget ? `GHS ${Number(data.budget).toLocaleString()}` : "TBD",
+      aggregationWindow: windowLabel,
+      status: "draft",
+      createdBy: "Admin User",
+      createdDate: today(),
+      linkedBids: 0,
+      notes: data.notes || undefined,
+    }
+    setRequests(prev => [newRequest, ...prev])
+    setShowCreateModal(false)
+    showToast(`${newId} created as draft`)
+  }
+
+  // --- Dynamic metrics ---
+  const tabItems = [
+    { label: "All", badge: requests.length },
+    { label: "Draft" },
+    { label: "Pending Receipt" },
+    { label: "Received" },
+    { label: "Active" },
+    { label: "In Progress" },
+    { label: "Completed" },
+    { label: "Cancelled" },
+  ]
+
+  const metricCards = [
+    { label: "Total Requests", value: String(requests.length), iconBg: "#D5E6FD", iconColor: "#00439E", icon: IconClipboardCheck },
+    { label: "Pending Receipt", value: String(requests.filter(r => r.status === "pending-receipt").length), iconBg: "#FEF0D8", iconColor: "#995917", icon: IconClock },
+    { label: "Active", value: String(requests.filter(r => r.status === "active").length), iconBg: "#D4F5D0", iconColor: "#1A5514", icon: IconPlayerPlay },
+    { label: "In Progress", value: String(requests.filter(r => r.status === "in-progress").length), iconBg: "#D5E6FD", iconColor: "#00439E", icon: IconLoader },
+    { label: "Completed", value: String(requests.filter(r => r.status === "completed").length), iconBg: "#D4F5D0", iconColor: "#1A5514", icon: IconCircleCheck },
+  ]
+
+  // --- Confirm modal info ---
+  const confirmModalInfo: Record<string, { title: string; description: string; confirmLabel: string }> = {
+    submit: { title: "Submit for Review", description: "This will send the supply request to Operations Admin for review. You won't be able to edit it until it's returned.", confirmLabel: "Submit for Review" },
+    receive: { title: "Receive Supply Request", description: "Confirm that you have received and reviewed this supply request from Sales Admin. It will move to the 'Received' stage for approval.", confirmLabel: "Confirm Receipt" },
+    return: { title: "Return to Sales Admin", description: "This will return the supply request to the Sales Admin who created it. They can make changes and resubmit.", confirmLabel: "Return Request" },
+    activate: { title: "Approve & Activate", description: "Approving this request will publish it to aggregators. They will be able to submit bids against this supply request.", confirmLabel: "Approve & Publish" },
+  }
+
+  // --- Detail view ---
   if (selectedRequest) {
     return (
       <>
         <SupplyRequestDetailPage
-          onBack={() => setSelectedRequest(null)}
+          onBack={() => setSelectedRequestId(null)}
           request={selectedRequest}
           onAction={handleAction}
         />
+        {/* Confirmation modals in detail view */}
+        {modalAction && modalAction.type !== "reject" && (
+          <ConfirmModal
+            open
+            onClose={() => setModalAction(null)}
+            onConfirm={confirmAction}
+            title={confirmModalInfo[modalAction.type]?.title ?? ""}
+            description={confirmModalInfo[modalAction.type]?.description ?? ""}
+            confirmLabel={confirmModalInfo[modalAction.type]?.confirmLabel ?? "Confirm"}
+          />
+        )}
+        {modalAction && modalAction.type === "reject" && (
+          <RejectModal open onClose={() => setModalAction(null)} onConfirm={confirmReject} />
+        )}
         {toast && <Toast message={toast} onDismiss={dismissToast} />}
       </>
     )
   }
 
   const filteredRequests = activeTab === "All"
-    ? supplyRequests
-    : supplyRequests.filter(r => statusToTab[r.status] === activeTab)
+    ? requests
+    : requests.filter(r => statusToTab[r.status] === activeTab)
 
   return (
     <div className="flex flex-col gap-4">
@@ -563,7 +729,7 @@ export function SupplyRequestsPage({ onDetailViewChange, initialTab }: { onDetai
       <div className="flex flex-col gap-3">
         {filteredRequests.map((req, i) => (
           <div key={req.id} className="stagger-child" style={{ "--stagger-index": i } as React.CSSProperties}>
-            <RequestCardComponent request={req} onAction={handleAction} onOpen={() => setSelectedRequest(req)} />
+            <RequestCardComponent request={req} onAction={handleAction} onOpen={() => setSelectedRequestId(req.id)} />
           </div>
         ))}
         {filteredRequests.length === 0 && (
@@ -604,11 +770,23 @@ export function SupplyRequestsPage({ onDetailViewChange, initialTab }: { onDetai
       <CreateRequestModal
         open={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        onSubmit={() => {
-          setShowCreateModal(false)
-          showToast("Supply request created successfully")
-        }}
+        onSubmit={handleCreate}
       />
+
+      {/* Confirmation Modals */}
+      {modalAction && modalAction.type !== "reject" && (
+        <ConfirmModal
+          open
+          onClose={() => setModalAction(null)}
+          onConfirm={confirmAction}
+          title={confirmModalInfo[modalAction.type]?.title ?? ""}
+          description={confirmModalInfo[modalAction.type]?.description ?? ""}
+          confirmLabel={confirmModalInfo[modalAction.type]?.confirmLabel ?? "Confirm"}
+        />
+      )}
+      {modalAction && modalAction.type === "reject" && (
+        <RejectModal open onClose={() => setModalAction(null)} onConfirm={confirmReject} />
+      )}
 
       {/* Toast */}
       {toast && <Toast message={toast} onDismiss={dismissToast} />}
