@@ -1,0 +1,220 @@
+@font-face {
+  font-family: 'Cera Pro';
+  src: url('../assets/fonts/Cera-Pro-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Cera Pro';
+  src: url('../assets/fonts/Cera-Pro-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* Primary (Green) */
+  --ref-primary-0: #000000;
+  --ref-primary-10: #002201;
+  --ref-primary-20: #003A02;
+  --ref-primary-30: #005303;
+  --ref-primary-40: #006E05;
+  --ref-primary-50: #008A07;
+  --ref-primary-60: #24A51C;
+  --ref-primary-70: #46C136;
+  --ref-primary-80: #63DE4F;
+  --ref-primary-90: #80FB69;
+  --ref-primary-95: #C4FFB3;
+  --ref-primary-98: #E8FFE0;
+  --ref-primary-100: #FFFFFF;
+
+  /* Secondary (Muted Green) */
+  --ref-secondary-0: #000000;
+  --ref-secondary-10: #101F0E;
+  --ref-secondary-20: #243422;
+  --ref-secondary-30: #3A4B37;
+  --ref-secondary-40: #51634D;
+  --ref-secondary-50: #6A7C65;
+  --ref-secondary-60: #83967E;
+  --ref-secondary-70: #9DB197;
+  --ref-secondary-80: #B8CDB1;
+  --ref-secondary-90: #D4E9CC;
+  --ref-secondary-95: #E2F7DA;
+  --ref-secondary-98: #EDFEE5;
+  --ref-secondary-100: #FFFFFF;
+
+  /* Tertiary (Teal) */
+  --ref-tertiary-0: #000000;
+  --ref-tertiary-10: #00201D;
+  --ref-tertiary-20: #003732;
+  --ref-tertiary-30: #004F48;
+  --ref-tertiary-40: #00685F;
+  --ref-tertiary-50: #008278;
+  --ref-tertiary-60: #1E9E92;
+  --ref-tertiary-70: #40BAAD;
+  --ref-tertiary-80: #5FD7C8;
+  --ref-tertiary-90: #7DF4E4;
+  --ref-tertiary-95: #B4FFF4;
+  --ref-tertiary-98: #E1FFFA;
+  --ref-tertiary-100: #FFFFFF;
+
+  /* Error (Red) */
+  --ref-error-0: #000000;
+  --ref-error-10: #410002;
+  --ref-error-20: #690005;
+  --ref-error-30: #93000A;
+  --ref-error-40: #BA1A1A;
+  --ref-error-50: #DE3730;
+  --ref-error-60: #FF5449;
+  --ref-error-70: #FF897D;
+  --ref-error-80: #FFB4AB;
+  --ref-error-90: #FFDAD6;
+  --ref-error-95: #FFEDEA;
+  --ref-error-98: #FFF8F7;
+  --ref-error-100: #FFFFFF;
+
+  /* Neutral (Warm Gray) */
+  --ref-neutral-0: #000000;
+  --ref-neutral-10: #1A1C18;
+  --ref-neutral-20: #2F312D;
+  --ref-neutral-30: #454743;
+  --ref-neutral-40: #5D5F5A;
+  --ref-neutral-50: #767873;
+  --ref-neutral-60: #90918C;
+  --ref-neutral-70: #AAACA7;
+  --ref-neutral-80: #C6C7C1;
+  --ref-neutral-90: #E2E3DD;
+  --ref-neutral-95: #F0F1EB;
+  --ref-neutral-98: #F9FAF4;
+  --ref-neutral-100: #FFFFFF;
+
+  /* Neutral Variant (Green-tinted Gray) */
+  --ref-neutral-variant-0: #000000;
+  --ref-neutral-variant-10: #171D14;
+  --ref-neutral-variant-20: #2C3228;
+  --ref-neutral-variant-30: #42493E;
+  --ref-neutral-variant-40: #5A6155;
+  --ref-neutral-variant-50: #73796D;
+  --ref-neutral-variant-60: #8C9387;
+  --ref-neutral-variant-70: #A7AEA1;
+  --ref-neutral-variant-80: #C2C9BB;
+  --ref-neutral-variant-90: #DEE5D7;
+  --ref-neutral-variant-95: #ECF3E5;
+  --ref-neutral-variant-98: #F5FCEE;
+  --ref-neutral-variant-100: #FFFFFF;
+
+  /* Semantic Aliases (MD3 Light Theme) */
+  --color-primary: var(--ref-primary-40);
+  --color-on-primary: var(--ref-primary-100);
+  --color-primary-container: var(--ref-primary-90);
+  --color-on-primary-container: var(--ref-primary-10);
+
+  --color-secondary: var(--ref-secondary-40);
+  --color-on-secondary: var(--ref-secondary-100);
+  --color-secondary-container: var(--ref-secondary-90);
+  --color-on-secondary-container: var(--ref-secondary-10);
+
+  --color-tertiary: var(--ref-tertiary-40);
+  --color-on-tertiary: var(--ref-tertiary-100);
+  --color-tertiary-container: var(--ref-tertiary-90);
+  --color-on-tertiary-container: var(--ref-tertiary-10);
+
+  --color-error: var(--ref-error-40);
+  --color-on-error: var(--ref-error-100);
+  --color-error-container: var(--ref-error-90);
+  --color-on-error-container: var(--ref-error-10);
+
+  --color-background: var(--ref-neutral-98);
+  --color-on-background: var(--ref-neutral-10);
+  --color-surface: var(--ref-neutral-98);
+  --color-on-surface: var(--ref-neutral-10);
+  --color-surface-variant: var(--ref-neutral-variant-90);
+  --color-on-surface-variant: var(--ref-neutral-variant-30);
+  --color-outline: var(--ref-neutral-variant-50);
+  --color-outline-variant: var(--ref-neutral-variant-80);
+
+  /* ─── Typography (Cera Pro) ─── */
+  --font-family: 'Cera Pro', sans-serif;
+
+  /* Display */
+  --type-display-lg-size: 6rem;       /* 96px */
+  --type-display-lg-line: 7rem;       /* 112px */
+  --type-display-lg-weight: 700;
+  --type-display-lg-tracking: 0;
+
+  --type-display-md-size: 5rem;       /* 80px */
+  --type-display-md-line: 6rem;       /* 96px */
+  --type-display-md-weight: 700;
+  --type-display-md-tracking: 0;
+
+  --type-display-sm-size: 4rem;       /* 64px */
+  --type-display-sm-line: 4.75rem;    /* 76px */
+  --type-display-sm-weight: 700;
+  --type-display-sm-tracking: 0;
+
+  /* Headline */
+  --type-headline-lg-size: 3rem;      /* 48px */
+  --type-headline-lg-line: 3.5rem;    /* 56px */
+  --type-headline-lg-weight: 700;
+  --type-headline-lg-tracking: 0;
+
+  --type-headline-md-size: 2.5rem;    /* 40px */
+  --type-headline-md-line: 3.25rem;   /* 52px */
+  --type-headline-md-weight: 700;
+  --type-headline-md-tracking: 0;
+
+  --type-headline-sm-size: 2.25rem;   /* 36px */
+  --type-headline-sm-line: 2.75rem;   /* 44px */
+  --type-headline-sm-weight: 700;
+  --type-headline-sm-tracking: 0;
+
+  /* Title */
+  --type-title-lg-size: 1.75rem;      /* 28px */
+  --type-title-lg-line: 2.25rem;      /* 36px */
+  --type-title-lg-weight: 700;
+  --type-title-lg-tracking: 0;
+
+  --type-title-md-size: 1.5rem;       /* 24px */
+  --type-title-md-line: 2rem;         /* 32px */
+  --type-title-md-weight: 700;
+  --type-title-md-tracking: 0;
+
+  --type-title-sm-size: 1.25rem;      /* 20px */
+  --type-title-sm-line: 1.75rem;      /* 28px */
+  --type-title-sm-weight: 700;
+  --type-title-sm-tracking: 0.1px;
+
+  /* Label */
+  --type-label-lg-size: 1rem;         /* 16px */
+  --type-label-lg-line: 1.5rem;       /* 24px */
+  --type-label-lg-weight: 700;
+  --type-label-lg-tracking: 0;
+
+  --type-label-md-size: 0.875rem;     /* 14px */
+  --type-label-md-line: 1.25rem;      /* 20px */
+  --type-label-md-weight: 700;
+  --type-label-md-tracking: 0;
+
+  --type-label-sm-size: 0.75rem;      /* 12px */
+  --type-label-sm-line: 1.125rem;     /* 18px */
+  --type-label-sm-weight: 700;
+  --type-label-sm-tracking: 0;
+
+  /* Body */
+  --type-body-lg-size: 1rem;          /* 16px */
+  --type-body-lg-line: 1.5rem;        /* 24px */
+  --type-body-lg-weight: 400;
+  --type-body-lg-tracking: 0;
+
+  --type-body-md-size: 0.875rem;      /* 14px */
+  --type-body-md-line: 1.25rem;       /* 20px */
+  --type-body-md-weight: 400;
+  --type-body-md-tracking: 0;
+
+  --type-body-sm-size: 0.75rem;       /* 12px */
+  --type-body-sm-line: 1.125rem;      /* 18px */
+  --type-body-sm-weight: 400;
+  --type-body-sm-tracking: 0;
+}
