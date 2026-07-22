@@ -24,7 +24,7 @@ import {
 
 // --- Types ---
 
-export type BidModalType = "counter-offer" | "accept-price" | "schedule-visit" | "approve-date" | "log-qa" | "finance-approve" | "finance-reject" | "attach-proof" | "finance-signoff" | "generate-grn" | "start-routing"
+export type BidModalType = "counter-offer" | "accept-price" | "schedule-visit" | "approve-date" | "log-qa" | "produce-label" | "finance-approve" | "finance-reject" | "attach-proof" | "finance-signoff" | "generate-grn" | "start-routing"
 
 // --- Sub-Components ---
 
@@ -159,11 +159,13 @@ export function SupplyBidDetailPage({
   bid,
   context,
   onAction,
+  onNavigateToProfile,
 }: {
   onBack: () => void
   bid: SupplyBid
   context?: "bids" | "disbursement"
   onAction?: (type: BidModalType) => void
+  onNavigateToProfile?: () => void
 }) {
   const si = stageIndex(bid.stage)
   const [activeTab, setActiveTab] = useState<"details" | "audit">("details")
@@ -368,7 +370,20 @@ export function SupplyBidDetailPage({
             <>
               {/* 1. Bid Details - always visible */}
               <CollapsibleSection title="Bid Details">
-                <InfoRow label="Aggregator" value={bid.aggregator} />
+                <div className="flex items-start">
+                  <span className="w-[269px] shrink-0 py-3 text-[16px] leading-[24px] font-normal text-[#525C4E]">Aggregator</span>
+                  <div className="flex-1 py-3 flex items-center gap-3">
+                    <span className="text-[16px] leading-[24px] font-normal text-[#161D14]">{bid.aggregator}</span>
+                    {onNavigateToProfile && (
+                      <button
+                        onClick={onNavigateToProfile}
+                        className="text-[13px] leading-[18px] font-bold text-[#36B92E] hover:text-[#2DA526] transition-colors"
+                      >
+                        View Profile
+                      </button>
+                    )}
+                  </div>
+                </div>
                 <InfoRow label="Crop / Variety" value={`${bid.crop} - ${bid.variety}`} />
                 <InfoRow label="Quantity" value={`${bid.quantity} ${bid.unit}`} />
                 <InfoRow label="Price per Unit" value={bid.pricePerUnit} />
@@ -416,7 +431,18 @@ export function SupplyBidDetailPage({
                       <InfoRow label="Visit Type" value={bid.deliveryMethod === "field-visit" ? "Field Visit" : "Warehouse Visit"} />
                     </>
                   ) : (
-                    <p className="py-3 text-[14px] leading-[20px] text-[#525C4E]">Not yet scheduled.</p>
+                    <div className="flex flex-col gap-3 py-3">
+                      <p className="text-[14px] leading-[20px] text-[#525C4E]">Not yet scheduled.</p>
+                      {bid.stage === "scheduling" && (
+                        <button
+                          onClick={() => onAction?.("schedule-visit")}
+                          className="self-start flex items-center gap-1.5 h-9 px-4 rounded-lg bg-[#36B92E] text-white text-[14px] leading-[20px] font-bold hover:bg-[#5EC758] transition-colors"
+                        >
+                          <IconCalendar className="size-4" />
+                          {bid.deliveryMethod === "field-visit" ? "Schedule Field Visit" : "Schedule Warehouse Delivery"}
+                        </button>
+                      )}
+                    </div>
                   )}
                 </CollapsibleSection>
               )}
@@ -433,9 +459,35 @@ export function SupplyBidDetailPage({
                       <InfoRow label="Grade" value="Grade A" />
                       <InfoRow label="Quantity Verified" value={`${bid.quantity} ${bid.unit}`} />
                       <InfoRow label="Variance" value="0.2 MT" />
+                      {/* Supply Chain: Label Produce (only when QA passed but not yet labeled) */}
+                      {bid.qaResult === "pass" && !bid.produceLabel && (bid.stage === "field-qa" || bid.stage === "warehouse-qa") && (
+                        <div className="flex items-center gap-3 py-3 mt-1 border-t border-[#E5E8DF]">
+                          <div className="flex-1">
+                            <p className="text-[14px] leading-[20px] font-bold text-[#161D14]">Awaiting produce labeling</p>
+                            <p className="text-[12px] leading-[18px] text-[#525C4E]">Supply Chain must label this produce before it moves to Finance</p>
+                          </div>
+                          <button
+                            onClick={() => onAction?.("produce-label")}
+                            className="flex items-center gap-1.5 h-9 px-4 rounded-lg bg-[#36B92E] text-white text-[14px] leading-[20px] font-bold hover:bg-[#5EC758] transition-colors"
+                          >
+                            Label Produce
+                          </button>
+                        </div>
+                      )}
                     </>
                   ) : (
-                    <p className="py-3 text-[14px] leading-[20px] text-[#525C4E]">QA not yet completed.</p>
+                    <div className="flex flex-col gap-3 py-3">
+                      <p className="text-[14px] leading-[20px] text-[#525C4E]">QA not yet completed.</p>
+                      {(bid.stage === "field-qa" || bid.stage === "warehouse-qa") && (
+                        <button
+                          onClick={() => onAction?.("log-qa")}
+                          className="self-start flex items-center gap-1.5 h-9 px-4 rounded-lg bg-[#36B92E] text-white text-[14px] leading-[20px] font-bold hover:bg-[#5EC758] transition-colors"
+                        >
+                          <IconClipboardCheck className="size-4" />
+                          Log QA Results
+                        </button>
+                      )}
+                    </div>
                   )}
                 </CollapsibleSection>
               )}
@@ -499,7 +551,18 @@ export function SupplyBidDetailPage({
                       <InfoRow label="Status" value="Generated" />
                     </>
                   ) : (
-                    <p className="py-3 text-[14px] leading-[20px] text-[#525C4E]">GRN not yet generated.</p>
+                    <div className="flex flex-col gap-3 py-3">
+                      <p className="text-[14px] leading-[20px] text-[#525C4E]">GRN not yet generated.</p>
+                      {bid.stage === "grn" && (
+                        <button
+                          onClick={() => onAction?.("generate-grn")}
+                          className="self-start flex items-center gap-1.5 h-9 px-4 rounded-lg bg-[#36B92E] text-white text-[14px] leading-[20px] font-bold hover:bg-[#5EC758] transition-colors"
+                        >
+                          <IconFileText className="size-4" />
+                          Generate GRN
+                        </button>
+                      )}
+                    </div>
                   )}
                 </CollapsibleSection>
               )}
@@ -514,7 +577,18 @@ export function SupplyBidDetailPage({
                       <InfoRow label="Waybill" value="WB-2026-0042" />
                     </>
                   ) : (
-                    <p className="py-3 text-[14px] leading-[20px] text-[#525C4E]">Not yet routed.</p>
+                    <div className="flex flex-col gap-3 py-3">
+                      <p className="text-[14px] leading-[20px] text-[#525C4E]">Not yet routed.</p>
+                      {bid.stage === "routing" && (
+                        <button
+                          onClick={() => onAction?.("start-routing")}
+                          className="self-start flex items-center gap-1.5 h-9 px-4 rounded-lg bg-[#36B92E] text-white text-[14px] leading-[20px] font-bold hover:bg-[#5EC758] transition-colors"
+                        >
+                          <IconRoute className="size-4" />
+                          Start Routing
+                        </button>
+                      )}
+                    </div>
                   )}
                 </CollapsibleSection>
               )}

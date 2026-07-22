@@ -60,7 +60,6 @@ const menuItems: MenuItem[] = [
     icon: IconPackage,
     items: [
       { title: "Overview" },
-      { title: "Aggregation Planning" },
       { title: "Supply Requests" },
       { title: "Bid Management" },
       { title: "Inventory Overview" },

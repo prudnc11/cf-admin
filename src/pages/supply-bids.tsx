@@ -35,7 +35,11 @@ import {
   BidGenerateGRNModal,
   BidStartRoutingModal,
   BidProduceLabelModal,
+  RateQAModal,
+  RateCycleModal,
 } from "@/components/forms/bid-modals"
+import { addRating, addSignal } from "./aggregator-profile"
+import type { AggregatorRating } from "./aggregator-profile"
 
 // --- Types ---
 
@@ -451,6 +455,21 @@ function PipelineStepper({ steps }: { steps: PipelineStep[] }) {
 
 function StageActions({ bid, onAction }: { bid: SupplyBid; onAction?: (type: BidModalType) => void }) {
   const { stage, financeStatus } = bid
+  // QA passed but not yet labeled — Supply Chain action
+  if ((stage === "field-qa" || stage === "warehouse-qa") && bid.qaResult === "pass" && !bid.produceLabel) {
+    return (
+      <div className="flex items-center gap-2">
+        <button
+          onClick={(e) => { e.stopPropagation(); onAction?.("produce-label") }}
+          className="flex items-center gap-1.5 h-8 px-3 rounded-lg bg-[#36B92E] text-white text-[13px] leading-[18px] font-bold hover:bg-[#5EC758] transition-colors"
+        >
+          Label Produce
+          <IconChevronRight className="size-3.5" />
+        </button>
+      </div>
+    )
+  }
+
   const actionMap: Record<string, { primary?: { label: string; modal: BidModalType }; secondary?: { label: string; modal: BidModalType } }> = {
     "submitted": { primary: { label: "Accept Price", modal: "accept-price" }, secondary: { label: "Counter Offer", modal: "counter-offer" } },
     "negotiation": { primary: { label: "Accept Price", modal: "accept-price" }, secondary: { label: "Counter Offer", modal: "counter-offer" } },
@@ -604,11 +623,141 @@ function BidCardComponent({ bid, onOpen, onAction }: { bid: SupplyBid; onOpen: (
 // --- Main Page ---
 
 type ModalState = {
-  type: BidModalType | "produce-label"
+  type: BidModalType | "produce-label" | "rate-qa" | "rate-cycle"
   bidId: string
 } | null
 
-export function SupplyBidsPage({ onDetailViewChange, initialTab }: { onDetailViewChange?: (v: boolean) => void; initialTab?: string }) {
+function SRGroup({
+  srId,
+  bids,
+  onSelectBid,
+  onAction,
+}: {
+  srId: string
+  bids: SupplyBid[]
+  onSelectBid: (id: string) => void
+  onAction: (bidId: string, type: BidModalType) => void
+}) {
+  const [collapsed, setCollapsed] = useState(false)
+  const totalQty = bids.reduce((sum, b) => sum + parseFloat(b.quantity), 0)
+  const crop = bids[0].crop
+  const completed = bids.filter(b => b.stage === "completed").length
+  const rejected = bids.filter(b => b.stage === "rejected").length
+  const active = bids.length - completed - rejected
+
+  return (
+    <div className="rounded-[12px] outline outline-1 outline-[#E5E8DF] overflow-hidden">
+      {/* Header — always visible, clickable to toggle */}
+      <button
+        onClick={() => setCollapsed(!collapsed)}
+        className="flex items-center justify-between w-full px-4 py-2.5 hover:bg-[#F7FAF6] transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <IconChevronRight className={`size-4 text-[#525C4E] transition-transform duration-200 ${collapsed ? "" : "rotate-90"}`} />
+          <span className="text-[13px] leading-[18px] font-bold text-[#161D14]">{srId}</span>
+          <span className="text-[12px] leading-[18px] font-normal text-[#71786C]">{crop}</span>
+          <span className="size-[3px] rounded-full bg-[#C3C8BC]" />
+          <span className="text-[12px] leading-[18px] font-normal text-[#71786C]">{bids.length} bid{bids.length !== 1 ? "s" : ""}</span>
+          <span className="size-[3px] rounded-full bg-[#C3C8BC]" />
+          <span className="text-[12px] leading-[18px] font-normal text-[#71786C]">{totalQty} MT</span>
+        </div>
+        <div className="flex items-center gap-2">
+          {active > 0 && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[6px] bg-[#D5E6FD] text-[11px] leading-[16px] font-normal text-[#00439E]">
+              {active} active
+            </span>
+          )}
+          {completed > 0 && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[6px] bg-[#D4F5D0] text-[11px] leading-[16px] font-normal text-[#1A5514]">
+              {completed} done
+            </span>
+          )}
+          {rejected > 0 && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[6px] bg-[#FEE2E2] text-[11px] leading-[16px] font-normal text-[#DC2626]">
+              {rejected} rejected
+            </span>
+          )}
+        </div>
+      </button>
+      {/* Bid rows — hidden when collapsed */}
+      {!collapsed && (
+        <div className="border-t border-[#E5E8DF]">
+          {bids.map((bid, i) => (
+            <GroupedBidRow
+              key={bid.id}
+              bid={bid}
+              onOpen={() => onSelectBid(bid.id)}
+              onAction={(type) => onAction(bid.id, type)}
+              isLast={i === bids.length - 1}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function GroupedBidRow({ bid, onOpen, onAction, isLast }: { bid: SupplyBid; onOpen: () => void; onAction?: (type: BidModalType) => void; isLast: boolean }) {
+  const [expanded, setExpanded] = useState(false)
+  return (
+    <div className={`px-4 py-3 flex flex-col gap-2 cursor-pointer hover:bg-[#F7FAF6] transition-colors ${!isLast ? "border-b border-[#E5E8DF]" : ""}`} onClick={onOpen}>
+      <div className="flex items-start gap-3">
+        <div className="flex-1 flex items-center gap-2.5">
+          <div className="flex items-center justify-center size-8 rounded-full bg-[#235C4B] shrink-0">
+            <span className="text-[14px] leading-[20px] font-bold text-[#CEFFEB]">{bid.aggregator.charAt(0)}</span>
+          </div>
+          <div className="flex-1 flex flex-col gap-0.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[14px] leading-[20px] font-bold text-[#161D14]">{bid.id}</span>
+              <StatusBadge label={stageLabel(bid.stage)} color={stageColor(bid.stage)} />
+              {bid.produceLabel && <ProduceLabel label={bid.produceLabel} />}
+              {bid.stage === "finance" && bid.financeStatus && (
+                <StatusBadge
+                  label={bid.financeStatus === "awaiting-review" ? "Awaiting Review" : bid.financeStatus === "pending-proof" ? "Pending Proof" : bid.financeStatus === "awaiting-signoff" ? "Awaiting Sign-off" : bid.financeStatus === "signed-off" ? "Signed Off" : "Rejected"}
+                  color={bid.financeStatus === "signed-off" ? "green" : bid.financeStatus === "rejected" ? "red" : "warning"}
+                />
+              )}
+            </div>
+            <p className="text-[12px] leading-[18px] font-normal text-[#71786C]">
+              {bid.aggregator} <span className="font-bold"> · </span>
+              {bid.quantity} {bid.unit} <span className="font-bold"> · </span>
+              {bid.pricePerUnit}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <TagBadge
+            label={bid.deliveryMethod === "field-visit" ? "Field Visit" : "Warehouse Visit"}
+            color={bid.deliveryMethod === "field-visit" ? "purple" : "blue"}
+          />
+          <button onClick={(e) => { e.stopPropagation(); setExpanded(!expanded) }}>
+            {expanded ? <IconChevronUp className="size-4 text-[#525C4E]" /> : <IconChevronDown className="size-4 text-[#525C4E]" />}
+          </button>
+        </div>
+      </div>
+      {expanded && (
+        <>
+          <PipelineStepper steps={bid.pipeline} />
+          <div className="flex items-center justify-between">
+            <div className="inline-flex items-start gap-4 px-2 py-1 bg-[#EDF0E6] rounded-[6px] text-[12px] leading-[18px]">
+              <span className="text-[#525C4E]">Submitted: <span className="font-bold">{bid.submittedDate}</span></span>
+              {bid.scheduledDate && <span className="text-[#525C4E]">Scheduled: <span className="font-bold">{bid.scheduledDate}</span></span>}
+              {bid.aggregatorScore && (
+                <span className="flex items-center gap-1 text-[#008744]">
+                  <IconCheck className="size-4" />
+                  Score: {bid.aggregatorScore}
+                </span>
+              )}
+            </div>
+            <StageActions bid={bid} onAction={onAction} />
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+export function SupplyBidsPage({ onDetailViewChange, initialTab, onNavigateToProfile }: { onDetailViewChange?: (v: boolean) => void; initialTab?: string; onNavigateToProfile?: (aggregatorName: string) => void }) {
   const [bids, setBids] = useState<SupplyBid[]>(supplyBids)
   const [activeTab, setActiveTab] = useState(initialTab || "All Bids")
   const [rowsPerPage, setRowsPerPage] = useState(10)
@@ -685,7 +834,7 @@ export function SupplyBidsPage({ onDetailViewChange, initialTab }: { onDetailVie
   }
 
   const handleLogQA = (data: { result: "pass" | "fail"; grade: string; moisture: string; notes: string }) => {
-    if (!modalState) return
+    if (!modalState || !modalBid) return
     if (data.result === "fail") {
       updateBid(modalState.bidId, (b) => ({
         ...b,
@@ -693,16 +842,38 @@ export function SupplyBidsPage({ onDetailViewChange, initialTab }: { onDetailVie
         pipeline: makePipeline(stageToIndex(b.stage), true),
         qaResult: "fail",
       }))
+      addSignal(modalBid.aggregator, { type: "negative", label: "QA Failed", bidId: modalState.bidId, date: today() })
       setModalState(null)
       showToast("QA failed — bid rejected")
     } else {
-      // QA passed — show produce label modal
+      // QA passed — show QA rating modal before produce label
       updateBid(modalState.bidId, (b) => ({
         ...b,
         qaResult: "pass",
       }))
-      setModalState({ type: "produce-label", bidId: modalState.bidId })
+      addSignal(modalBid.aggregator, { type: "positive", label: "QA Passed", bidId: modalState.bidId, date: today() })
+      setModalState({ type: "rate-qa", bidId: modalState.bidId })
     }
+  }
+
+  const handleRateQA = (data: { ratings: Record<string, number>; comment: string }) => {
+    if (!modalState || !modalBid) return
+    const rating: AggregatorRating = {
+      bidId: modalState.bidId,
+      type: "qa",
+      ratings: data.ratings,
+      comment: data.comment,
+      date: today(),
+      crop: modalBid.crop,
+    }
+    addRating(modalBid.aggregator, rating)
+    setModalState(null)
+    showToast("QA passed — awaiting Supply Chain to label produce")
+  }
+
+  const handleSkipQARating = () => {
+    setModalState(null)
+    showToast("QA passed — awaiting Supply Chain to label produce")
   }
 
   const handleProduceLabel = (data: { label: "Local" | "Export" | "Both" }) => {
@@ -729,13 +900,14 @@ export function SupplyBidsPage({ onDetailViewChange, initialTab }: { onDetailVie
   }
 
   const handleFinanceReject = (_data: { reason: string }) => {
-    if (!modalState) return
+    if (!modalState || !modalBid) return
     updateBid(modalState.bidId, (b) => ({
       ...b,
       stage: "rejected",
       pipeline: makePipeline(stageToIndex("finance"), true),
       financeStatus: "rejected",
     }))
+    addSignal(modalBid.aggregator, { type: "negative", label: "Finance Rejected", bidId: modalState.bidId, date: today() })
     setModalState(null)
     showToast("Disbursement rejected — bid cancelled")
   }
@@ -776,7 +948,7 @@ export function SupplyBidsPage({ onDetailViewChange, initialTab }: { onDetailVie
   }
 
   const handleStartRouting = (data: { routingMethod: string }) => {
-    if (!modalState) return
+    if (!modalState || !modalBid) return
     const dest = data.routingMethod === "dispatch" ? "Direct dispatch to buyer" : "Accra Central Warehouse"
     updateBid(modalState.bidId, (b) => ({
       ...b,
@@ -785,6 +957,27 @@ export function SupplyBidsPage({ onDetailViewChange, initialTab }: { onDetailVie
       routingDestination: dest,
       aggregatorScore: +(Math.random() * 1.5 + 3.5).toFixed(1),
     }))
+    addSignal(modalBid.aggregator, { type: "positive", label: "Bid Fulfilled", bidId: modalState.bidId, date: today() })
+    // Show cycle rating modal
+    setModalState({ type: "rate-cycle", bidId: modalState.bidId })
+  }
+
+  const handleRateCycle = (data: { ratings: Record<string, number>; comment: string }) => {
+    if (!modalState || !modalBid) return
+    const rating: AggregatorRating = {
+      bidId: modalState.bidId,
+      type: "cycle",
+      ratings: data.ratings,
+      comment: data.comment,
+      date: today(),
+      crop: modalBid.crop,
+    }
+    addRating(modalBid.aggregator, rating)
+    setModalState(null)
+    showToast("Routing complete — bid fulfilled!")
+  }
+
+  const handleSkipCycleRating = () => {
     setModalState(null)
     showToast("Routing complete — bid fulfilled!")
   }
@@ -831,6 +1024,7 @@ export function SupplyBidsPage({ onDetailViewChange, initialTab }: { onDetailVie
           onBack={() => setSelectedBidId(null)}
           bid={selectedBid}
           onAction={(type) => openModal(selectedBid.id, type)}
+          onNavigateToProfile={onNavigateToProfile ? () => onNavigateToProfile(selectedBid.aggregator) : undefined}
         />
         {/* Render modals in detail view too */}
         {modalBid && renderModals()}
@@ -913,6 +1107,20 @@ export function SupplyBidsPage({ onDetailViewChange, initialTab }: { onDetailVie
           bid={modalBid}
           onSubmit={handleStartRouting}
         />
+        <RateQAModal
+          open={modalState.type === "rate-qa"}
+          onOpenChange={(v) => !v && handleSkipQARating()}
+          bid={modalBid}
+          onSubmit={handleRateQA}
+          onSkip={handleSkipQARating}
+        />
+        <RateCycleModal
+          open={modalState.type === "rate-cycle"}
+          onOpenChange={(v) => !v && handleSkipCycleRating()}
+          bid={modalBid}
+          onSubmit={handleRateCycle}
+          onSkip={handleSkipCycleRating}
+        />
       </>
     )
   }
@@ -976,17 +1184,45 @@ export function SupplyBidsPage({ onDetailViewChange, initialTab }: { onDetailVie
         })}
       </div>
 
-      {/* Bid Cards */}
+      {/* Bid Cards — grouped by Supply Request */}
       <div className="flex flex-col gap-3">
-        {filteredBids.map((bid, i) => (
-          <div key={bid.id} className="stagger-child" style={{ "--stagger-index": i } as React.CSSProperties}>
-            <BidCardComponent
-              bid={bid}
-              onOpen={() => setSelectedBidId(bid.id)}
-              onAction={(type) => openModal(bid.id, type)}
-            />
-          </div>
-        ))}
+        {(() => {
+          const groups: Record<string, SupplyBid[]> = {}
+          for (const bid of filteredBids) {
+            if (!groups[bid.supplyRequestId]) groups[bid.supplyRequestId] = []
+            groups[bid.supplyRequestId].push(bid)
+          }
+          const srIds = Object.keys(groups)
+          let idx = 0
+          return srIds.map((srId) => {
+            const groupBids = groups[srId]
+            const isMulti = groupBids.length > 1
+            if (isMulti) {
+              const i = idx++
+              return (
+                <div key={srId} className="stagger-child" style={{ "--stagger-index": i } as React.CSSProperties}>
+                  <SRGroup
+                    srId={srId}
+                    bids={groupBids}
+                    onSelectBid={setSelectedBidId}
+                    onAction={openModal}
+                  />
+                </div>
+              )
+            }
+            const bid = groupBids[0]
+            const i = idx++
+            return (
+              <div key={bid.id} className="stagger-child" style={{ "--stagger-index": i } as React.CSSProperties}>
+                <BidCardComponent
+                  bid={bid}
+                  onOpen={() => setSelectedBidId(bid.id)}
+                  onAction={(type) => openModal(bid.id, type)}
+                />
+              </div>
+            )
+          })
+        })()}
         {filteredBids.length === 0 && (
           <div className="flex items-center justify-center py-16 text-[14px] leading-[20px] text-[#525C4E]">
             No bids in this category.

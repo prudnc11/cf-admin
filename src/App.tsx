@@ -21,16 +21,18 @@ import { DiscrepanciesPage } from "@/pages/discrepancies"
 import { MovementLogsPage } from "@/pages/movement-logs"
 import { DelayMonitoringPage } from "@/pages/delay-monitoring"
 import { AggregatorManagementPage } from "@/pages/aggregator-management"
+import { AggregatorProfilePage } from "@/pages/aggregator-profile"
 import { SalesAdminSupplyRequestsPage } from "@/pages/sales-admin-supply-requests"
 import { NotificationSheet } from "@/components/notification-sheet"
 
-const PAGES_WITHOUT_SUBHEADER = ["All requests", "Aggregator Management", "Supply Requests", "Bid Management", "SA Supply Requests"]
+const PAGES_WITHOUT_SUBHEADER = ["All requests", "Aggregator Management", "Supply Requests", "Bid Management", "SA Supply Requests", "Aggregator Profile"]
 
 function App() {
   const [activeItem, setActiveItem] = useState("Dashboard")
   const [isDetailView, setIsDetailView] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [initialTab, setInitialTab] = useState<string | undefined>(undefined)
+  const [aggregatorProfileName, setAggregatorProfileName] = useState<string | null>(null)
 
   const navigateToPage = (page: string, tab?: string) => {
     setActiveItem(page)
@@ -107,7 +109,7 @@ function App() {
             {activeItem === "Procurement Request" && <ProcurementRequestPage onDetailViewChange={setIsDetailView} initialTab={initialTab} />}
             {activeItem === "Disbursement" && <DisbursementPage onDetailViewChange={setIsDetailView} initialTab={initialTab} />}
             {activeItem === "Supply Requests" && <SupplyRequestsPage onDetailViewChange={setIsDetailView} initialTab={initialTab} />}
-            {activeItem === "Bid Management" && <SupplyBidsPage onDetailViewChange={setIsDetailView} initialTab={initialTab} />}
+            {activeItem === "Bid Management" && <SupplyBidsPage onDetailViewChange={setIsDetailView} initialTab={initialTab} onNavigateToProfile={(name) => { setAggregatorProfileName(name); setActiveItem("Aggregator Profile") }} />}
             {activeItem === "Overview" && <OperationsOverviewPage />}
             {activeItem === "Inventory Overview" && <InventoryOverviewPage />}
             {activeItem === "Stock alerts" && <StockAlertsPage />}
@@ -115,6 +117,13 @@ function App() {
             {activeItem === "Movements Logs" && <MovementLogsPage />}
             {activeItem === "Delays Monitoring" && <DelayMonitoringPage />}
             {activeItem === "Aggregator Management" && <AggregatorManagementPage />}
+            {activeItem === "Aggregator Profile" && aggregatorProfileName && (
+              <AggregatorProfilePage
+                aggregatorName={aggregatorProfileName}
+                onBack={() => { setActiveItem("Bid Management"); setAggregatorProfileName(null) }}
+                onNavigateToBid={() => { setActiveItem("Bid Management"); setInitialTab(undefined) }}
+              />
+            )}
             {activeItem === "SA Supply Requests" && <SalesAdminSupplyRequestsPage onDetailViewChange={setIsDetailView} initialTab={initialTab} />}
           </main>
         </SidebarInset>

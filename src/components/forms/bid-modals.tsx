@@ -2,7 +2,7 @@ import { useState } from "react"
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@/components/ui/modal"
 import { FormField, FormDateInput, FormSelect, FormInput, FormTextarea, FormCheckbox } from "@/components/ui/form-fields"
 import { Button } from "@/components/ui/button"
-import { IconInfoCircle, IconCheck, IconX, IconAlertTriangle } from "@tabler/icons-react"
+import { IconInfoCircle, IconCheck, IconX, IconAlertTriangle, IconStar } from "@tabler/icons-react"
 import { cn } from "@/lib/utils"
 import type { SupplyBid } from "@/pages/supply-bids"
 
@@ -794,7 +794,7 @@ export function BidProduceLabelModal({
     setLabel("")
   }
 
-  const options: { value: "Local" | "Export" | "Both"; desc: string }[] = [
+  const options: { value: "Local" | "Export" | "Both"; desc: string; }[] = [
     { value: "Export", desc: "Produce meets export-grade standards" },
     { value: "Local", desc: "Produce for local/domestic market" },
     { value: "Both", desc: "Split between export and local market" },
@@ -848,6 +848,207 @@ export function BidProduceLabelModal({
             <Button type="button" variant="secondary" size="md" shape="rect" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button type="submit" size="md" shape="rect" disabled={!label}>
               Confirm & Send to Finance
+              <IconCheck className="size-5" />
+            </Button>
+          </ModalFooter>
+        </form>
+      </ModalContent>
+    </Modal>
+  )
+}
+
+// --- 12. Rate QA Readiness Modal (after QA pass) ---
+
+function StarRating({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const [hover, setHover] = useState(0)
+  return (
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <button
+          key={star}
+          type="button"
+          onMouseEnter={() => setHover(star)}
+          onMouseLeave={() => setHover(0)}
+          onClick={() => onChange(star)}
+          className="p-0.5 transition-transform hover:scale-110"
+        >
+          <IconStar
+            className="size-7"
+            style={{ color: star <= (hover || value) ? "#FBB33A" : "#E1E4DA" }}
+            fill={star <= (hover || value) ? "#FBB33A" : "none"}
+          />
+        </button>
+      ))}
+    </div>
+  )
+}
+
+const qaQuestions = [
+  { key: "preparedness", label: "QA Preparedness", desc: "Was the produce properly prepared and accessible for inspection?" },
+  { key: "accuracy", label: "Description Accuracy", desc: "Did the produce match what was described in the bid?" },
+  { key: "cooperation", label: "Cooperation", desc: "Was the aggregator cooperative during the QA process?" },
+]
+
+export function RateQAModal({
+  open,
+  onOpenChange,
+  bid,
+  onSubmit,
+  onSkip,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  bid: SupplyBid
+  onSubmit: (data: { ratings: Record<string, number>; comment: string }) => void
+  onSkip: () => void
+}) {
+  const [ratings, setRatings] = useState<Record<string, number>>({})
+  const [comment, setComment] = useState("")
+  const allRated = qaQuestions.every(q => ratings[q.key] > 0)
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!allRated) return
+    onSubmit({ ratings, comment })
+    setRatings({}); setComment("")
+  }
+
+  return (
+    <Modal open={open} onOpenChange={onOpenChange}>
+      <ModalContent>
+        <form onSubmit={handleSubmit}>
+          <ModalHeader title="Rate QA Readiness" onClose={() => { onSkip() }} />
+          <ModalBody>
+            <div className="flex flex-col gap-6">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center size-10 rounded-full bg-[#235C4B]">
+                  <span className="text-[16px] font-bold text-[#CEFFEB]">{bid.aggregator.charAt(0)}</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[16px] leading-[24px] font-bold text-[#161D14]">{bid.aggregator}</span>
+                  <span className="text-[14px] leading-[20px] text-[#525C4E]">{bid.crop} • {bid.quantity} {bid.unit} • {bid.id}</span>
+                </div>
+              </div>
+
+              <div className="p-4 bg-[#D5E6FD] rounded-[12px] flex items-start gap-2">
+                <IconInfoCircle className="size-5 text-[#00439E] shrink-0 mt-0.5" />
+                <p className="text-[14px] leading-[20px] text-[#00439E]">
+                  Rate this aggregator's QA readiness. This feeds into their aggregator score visible only to admins.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-5">
+                {qaQuestions.map((q) => (
+                  <div key={q.key} className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-col">
+                        <span className="text-[14px] leading-[20px] font-bold text-[#161D14]">{q.label}</span>
+                        <span className="text-[12px] leading-[18px] text-[#525C4E]">{q.desc}</span>
+                      </div>
+                      <StarRating value={ratings[q.key] || 0} onChange={(v) => setRatings({ ...ratings, [q.key]: v })} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <FormField label="Additional comments (optional)">
+                <FormTextarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Any observations about this aggregator's QA readiness..." />
+              </FormField>
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <Button type="button" variant="ghost" size="md" shape="rect" onClick={onSkip}>Skip for now</Button>
+            <Button type="submit" size="md" shape="rect" disabled={!allRated}>
+              Submit Rating
+              <IconCheck className="size-5" />
+            </Button>
+          </ModalFooter>
+        </form>
+      </ModalContent>
+    </Modal>
+  )
+}
+
+// --- 13. Rate Cycle Experience Modal (after routing) ---
+
+const cycleQuestions = [
+  { key: "delivery", label: "Timely Delivery", desc: "Did the aggregator deliver within the scheduled timeframe?" },
+  { key: "quality", label: "Overall Quality", desc: "Was the overall quality of produce consistent throughout?" },
+  { key: "communication", label: "Communication", desc: "Was the aggregator responsive and easy to work with?" },
+  { key: "reliability", label: "Reliability", desc: "Would you work with this aggregator again?" },
+]
+
+export function RateCycleModal({
+  open,
+  onOpenChange,
+  bid,
+  onSubmit,
+  onSkip,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  bid: SupplyBid
+  onSubmit: (data: { ratings: Record<string, number>; comment: string }) => void
+  onSkip: () => void
+}) {
+  const [ratings, setRatings] = useState<Record<string, number>>({})
+  const [comment, setComment] = useState("")
+  const allRated = cycleQuestions.every(q => ratings[q.key] > 0)
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!allRated) return
+    onSubmit({ ratings, comment })
+    setRatings({}); setComment("")
+  }
+
+  return (
+    <Modal open={open} onOpenChange={onOpenChange}>
+      <ModalContent>
+        <form onSubmit={handleSubmit}>
+          <ModalHeader title="Rate Aggregation Cycle" onClose={() => { onSkip() }} />
+          <ModalBody>
+            <div className="flex flex-col gap-6">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center size-10 rounded-full bg-[#235C4B]">
+                  <span className="text-[16px] font-bold text-[#CEFFEB]">{bid.aggregator.charAt(0)}</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[16px] leading-[24px] font-bold text-[#161D14]">{bid.aggregator}</span>
+                  <span className="text-[14px] leading-[20px] text-[#525C4E]">{bid.crop} • {bid.quantity} {bid.unit} • {bid.id}</span>
+                </div>
+              </div>
+
+              <div className="p-4 bg-[#D4F5D0] rounded-[12px] flex items-start gap-2">
+                <IconCheck className="size-5 text-[#1A5514] shrink-0 mt-0.5" />
+                <p className="text-[14px] leading-[20px] text-[#1A5514]">
+                  This bid has been successfully routed. Rate the overall aggregation cycle experience.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-5">
+                {cycleQuestions.map((q) => (
+                  <div key={q.key} className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-col">
+                        <span className="text-[14px] leading-[20px] font-bold text-[#161D14]">{q.label}</span>
+                        <span className="text-[12px] leading-[18px] text-[#525C4E]">{q.desc}</span>
+                      </div>
+                      <StarRating value={ratings[q.key] || 0} onChange={(v) => setRatings({ ...ratings, [q.key]: v })} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <FormField label="Additional comments (optional)">
+                <FormTextarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Overall experience working with this aggregator..." />
+              </FormField>
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <Button type="button" variant="ghost" size="md" shape="rect" onClick={onSkip}>Skip for now</Button>
+            <Button type="submit" size="md" shape="rect" disabled={!allRated}>
+              Submit Rating
               <IconCheck className="size-5" />
             </Button>
           </ModalFooter>
