@@ -1034,7 +1034,7 @@ export function SalesAdminSupplyRequestsPage({ onDetailViewChange, initialTab }:
         {metricCards.map((card, i) => {
           const Icon = card.icon
           return (
-            <div key={card.label} className="p-4 bg-white rounded-[12px] shadow-sm outline outline-1 outline-[#E5E8DF] flex flex-col gap-3 hover-lift stagger-child" style={{ "--stagger-index": i } as React.CSSProperties}>
+            <div key={card.label} className="p-4 bg-white rounded-[12px] shadow-sm outline outline-1 outline-[#E5E8DF] flex flex-col gap-3 hover-lift" style={{ animationDelay: `${i * 60}ms` } as React.CSSProperties}>
               <div className="flex items-center gap-2">
                 <div className="p-1.5 rounded-md flex items-center" style={{ background: card.iconBg }}>
                   <Icon className="size-4" style={{ color: card.iconColor }} />

@@ -80,8 +80,8 @@ const menuItems: MenuItem[] = [
     title: "Supply chain",
     icon: Icon3dRotate,
     items: [
-      { title: "Supply Requests" },
-      { title: "Bid Management" },
+      { title: "SC Supply Requests" },
+      { title: "SC Bid Management" },
     ],
   },
   {

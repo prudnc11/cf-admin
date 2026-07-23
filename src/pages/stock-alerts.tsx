@@ -43,10 +43,10 @@ const alertSummary = [
 
 const alertRows: StockAlertRow[] = [
   { id: "1", commodity: "Cassava", severity: "Critical", currentStock: 18, threshold: 25, daysSupply: 7, suggestedReorder: 100, lastReceipt: "2026-05-19", thresholdPercent: 72 },
-  { id: "2", commodity: "Cocos", severity: "Low stock", currentStock: 18, threshold: 25, daysSupply: 7, suggestedReorder: 100, lastReceipt: "2026-05-19", thresholdPercent: 90 },
+  { id: "2", commodity: "Cocoa", severity: "Low stock", currentStock: 18, threshold: 25, daysSupply: 7, suggestedReorder: 100, lastReceipt: "2026-05-19", thresholdPercent: 90 },
   { id: "3", commodity: "Soyabean", severity: "Out of stock", currentStock: 18, threshold: 25, daysSupply: 7, suggestedReorder: 100, lastReceipt: "2026-05-19", thresholdPercent: 72 },
   { id: "4", commodity: "Cassava", severity: "Critical", currentStock: 18, threshold: 25, daysSupply: 7, suggestedReorder: 100, lastReceipt: "2026-05-19", thresholdPercent: 72 },
-  { id: "5", commodity: "Cocos", severity: "Low stock", currentStock: 18, threshold: 25, daysSupply: 7, suggestedReorder: 100, lastReceipt: "2026-05-19", thresholdPercent: 90 },
+  { id: "5", commodity: "Cocoa", severity: "Low stock", currentStock: 18, threshold: 25, daysSupply: 7, suggestedReorder: 100, lastReceipt: "2026-05-19", thresholdPercent: 90 },
 ]
 
 // ── Subcomponents ──

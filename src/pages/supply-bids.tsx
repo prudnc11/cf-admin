@@ -1041,15 +1041,6 @@ export function SupplyBidsPage({ onDetailViewChange, initialTab, onNavigateToPro
     "Rejected": IconX,
   }
 
-  const metricCards = [
-    { label: "Total Bids", value: String(bids.length), iconBg: "#D5E6FD", iconColor: "#00439E", icon: IconClipboardCheck },
-    { label: "In Negotiation", value: String(bids.filter(b => b.stage === "negotiation").length), iconBg: "#FEF0D8", iconColor: "#995917", icon: IconMessages },
-    { label: "Awaiting QA", value: String(bids.filter(b => b.stage === "field-qa" || b.stage === "warehouse-qa").length), iconBg: "#D4F5D0", iconColor: "#1A5514", icon: IconClipboardCheck },
-    { label: "Awaiting Finance", value: String(bids.filter(b => b.stage === "finance").length), iconBg: "#F3E8FD", iconColor: "#6B21A8", icon: IconCash },
-    { label: "GRN Pending", value: String(bids.filter(b => b.stage === "grn").length), iconBg: "#D4F5D0", iconColor: "#1A5514", icon: IconFileText },
-    { label: "Completed", value: String(bids.filter(b => b.stage === "completed").length), iconBg: "#D4F5D0", iconColor: "#1A5514", icon: IconCircleCheck },
-  ]
-
   // --- Detail view ---
   if (selectedBid) {
     return (
@@ -1079,6 +1070,15 @@ export function SupplyBidsPage({ onDetailViewChange, initialTab, onNavigateToPro
     if (requestFilter !== "all" && b.supplyRequestId !== requestFilter) return false
     return true
   })
+
+  const metricCards = [
+    { label: "Total Bids", value: String(filteredBids.length), iconBg: "#D5E6FD", iconColor: "#00439E", icon: IconClipboardCheck },
+    { label: "In Negotiation", value: String(filteredBids.filter(b => b.stage === "negotiation").length), iconBg: "#FEF0D8", iconColor: "#995917", icon: IconMessages },
+    { label: "Awaiting QA", value: String(filteredBids.filter(b => b.stage === "field-qa" || b.stage === "warehouse-qa").length), iconBg: "#D4F5D0", iconColor: "#1A5514", icon: IconClipboardCheck },
+    { label: "Awaiting Finance", value: String(filteredBids.filter(b => b.stage === "finance").length), iconBg: "#F3E8FD", iconColor: "#6B21A8", icon: IconCash },
+    { label: "GRN Pending", value: String(filteredBids.filter(b => b.stage === "grn").length), iconBg: "#D4F5D0", iconColor: "#1A5514", icon: IconFileText },
+    { label: "Completed", value: String(filteredBids.filter(b => b.stage === "completed").length), iconBg: "#D4F5D0", iconColor: "#1A5514", icon: IconCircleCheck },
+  ]
 
   function renderModals() {
     if (!modalBid || !modalState) return null

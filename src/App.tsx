@@ -40,7 +40,7 @@ function App() {
     setIsDetailView(false)
   }
 
-  const hideSubHeader = PAGES_WITHOUT_SUBHEADER.includes(activeItem) || ((activeItem === "Procurement Request" || activeItem === "Disbursement" || activeItem === "Supply Requests" || activeItem === "Bid Management" || activeItem === "SA Supply Requests") && isDetailView)
+  const hideSubHeader = PAGES_WITHOUT_SUBHEADER.includes(activeItem) || ((activeItem === "Procurement Request" || activeItem === "Disbursement" || activeItem === "Supply Requests" || activeItem === "Bid Management" || activeItem === "SC Supply Requests" || activeItem === "SC Bid Management" || activeItem === "SA Supply Requests") && isDetailView)
 
   return (
     <TooltipProvider>
@@ -60,6 +60,7 @@ function App() {
             </div>
             <button
               onClick={() => setNotifOpen(true)}
+              aria-label="Notifications"
               className="flex items-center justify-center size-9 rounded-full bg-[#EDF0E6]"
             >
               <IconBell className="size-4 text-[#161D14]" />
@@ -124,6 +125,8 @@ function App() {
                 onNavigateToBid={() => { setActiveItem("Bid Management"); setInitialTab(undefined) }}
               />
             )}
+            {activeItem === "SC Supply Requests" && <SupplyRequestsPage onDetailViewChange={setIsDetailView} initialTab={initialTab} />}
+            {activeItem === "SC Bid Management" && <SupplyBidsPage onDetailViewChange={setIsDetailView} initialTab={initialTab} onNavigateToProfile={(name) => { setAggregatorProfileName(name); setActiveItem("Aggregator Profile") }} />}
             {activeItem === "SA Supply Requests" && <SalesAdminSupplyRequestsPage onDetailViewChange={setIsDetailView} initialTab={initialTab} />}
           </main>
         </SidebarInset>
