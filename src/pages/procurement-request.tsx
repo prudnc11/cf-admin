@@ -1,5 +1,6 @@
-import { useState, useEffect, Fragment } from "react"
+import { useState, useEffect, Fragment, useMemo } from "react"
 import { ProcurementRequestDetailPage } from "./procurement-request-detail"
+import { FilterDropdown, DATE_OPTIONS, isWithinDateRange } from "@/components/ui/filter-dropdown"
 import {
   IconChevronDown,
   IconChevronRight,
@@ -40,12 +41,6 @@ export type ModalType = "schedule-visit" | "log-field-qa" | "approve" | "reject"
 
 // --- Data ---
 
-const filters = [
-  { label: "All time", icon: IconCalendar },
-  { label: "All Aggregators", icon: IconUsers },
-  { label: "All commodities", icon: IconWorld },
-  { label: "All plans", icon: IconFileText },
-]
 
 const metricCards = [
   { label: "Total Requests", value: "68", iconBg: "#D5E6FD", iconColor: "#00439E", icon: IconClipboardCheck },
@@ -639,6 +634,15 @@ export function ProcurementRequestPage({ onDetailViewChange, initialTab }: { onD
   const [activeModal, setActiveModal] = useState<{ type: ModalType; requestIndex: number } | null>(null)
   const { toast, showToast, dismissToast } = useToast()
 
+  const [dateFilter, setDateFilter] = useState("all")
+  const [aggregatorFilter, setAggregatorFilter] = useState("all")
+  const [commodityFilter, setCommodityFilter] = useState("all")
+  const [planFilter, setPlanFilter] = useState("all")
+
+  const aggregatorOptions = useMemo(() => [...new Set(requests.map((r) => r.cooperative))].sort().map((v) => ({ label: v, value: v })), [])
+  const commodityOptions = useMemo(() => [...new Set(requests.map((r) => r.commodity))].sort().map((v) => ({ label: v, value: v })), [])
+  const planOptions = useMemo(() => [...new Set(requests.map((r) => r.plan))].sort().map((v) => ({ label: v, value: v })), [])
+
   useEffect(() => {
     if (initialTab) setActiveTab(initialTab)
   }, [initialTab])
@@ -666,10 +670,15 @@ export function ProcurementRequestPage({ onDetailViewChange, initialTab }: { onD
     closeModal()
   }
 
-  // Filter by tab
-  const filteredRequests = activeTab === "All Requests"
-    ? localRequests
-    : localRequests.filter((r) => r.tabCategory === activeTab)
+  // Filter by tab + dropdowns
+  const filteredRequests = localRequests.filter((r) => {
+    if (activeTab !== "All Requests" && r.tabCategory !== activeTab) return false
+    if (!isWithinDateRange(r.scheduledDate, dateFilter)) return false
+    if (aggregatorFilter !== "all" && r.cooperative !== aggregatorFilter) return false
+    if (commodityFilter !== "all" && r.commodity !== commodityFilter) return false
+    if (planFilter !== "all" && r.plan !== planFilter) return false
+    return true
+  })
 
   // Paginate
   const totalPages = Math.max(1, Math.ceil(filteredRequests.length / rowsPerPage))
@@ -786,19 +795,10 @@ export function ProcurementRequestPage({ onDetailViewChange, initialTab }: { onD
     <div className="flex flex-col gap-4">
       {/* Filter Bar */}
       <div className="flex items-center gap-4">
-        {filters.map((f) => {
-          const Icon = f.icon
-          return (
-            <button
-              key={f.label}
-              className="flex items-center gap-2 h-9 px-3 rounded-full bg-[#EDF0E6] text-[14px] leading-[20px] font-normal text-[#161D14]"
-            >
-              <Icon className="size-4 text-[#161D14]" />
-              {f.label}
-              <IconChevronDown className="size-4 text-[#161D14]" />
-            </button>
-          )
-        })}
+        <FilterDropdown label="Date" icon={IconCalendar} options={DATE_OPTIONS} value={dateFilter} onChange={setDateFilter} allLabel="All time" />
+        <FilterDropdown label="Aggregator" icon={IconUsers} options={aggregatorOptions} value={aggregatorFilter} onChange={setAggregatorFilter} allLabel="All Aggregators" />
+        <FilterDropdown label="Commodity" icon={IconWorld} options={commodityOptions} value={commodityFilter} onChange={setCommodityFilter} allLabel="All commodities" />
+        <FilterDropdown label="Plan" icon={IconFileText} options={planOptions} value={planFilter} onChange={setPlanFilter} allLabel="All plans" />
       </div>
 
       {/* Metric Cards */}

@@ -1,6 +1,5 @@
 import { useState } from "react"
 import {
-  IconChevronDown,
   IconChevronRight,
   IconChevronLeft,
   IconChevronsRight,
@@ -20,6 +19,7 @@ import {
   IconInfoCircle,
   IconRefreshAlert,
 } from "@tabler/icons-react"
+import { FilterDropdown } from "@/components/ui/filter-dropdown"
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@/components/ui/modal"
 import { Button } from "@/components/ui/button"
 import { FormField, FormSelect, FormTextarea } from "@/components/ui/form-fields"
@@ -510,21 +510,41 @@ export function DelayMonitoringPage() {
   const [activeModal, setActiveModal] = useState<"escalate" | "resolve" | null>(null)
   const [detailOpen, setDetailOpen] = useState<"procurement" | "fulfillment" | null>(null)
 
+  // Procurement filter states
+  const [procStatusFilter, setProcStatusFilter] = useState("all")
+  const [procCommodityFilter, setProcCommodityFilter] = useState("all")
+  const [procIndicatorFilter, setProcIndicatorFilter] = useState("all")
+
+  // Fulfillment filter states
+  const [fulStatusFilter, setFulStatusFilter] = useState("all")
+  const [fulAggregatorFilter, setFulAggregatorFilter] = useState("all")
+  const [fulSeverityFilter, setFulSeverityFilter] = useState("all")
+
   const totalPages = Math.ceil(TOTAL_ROWS / ROWS_PER_PAGE)
   const weekDays = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
 
-  const filteredProc = procurementRows.filter((r) =>
-    procSearch === "" ||
-    r.aggregator.toLowerCase().includes(procSearch.toLowerCase()) ||
-    r.commodity.toLowerCase().includes(procSearch.toLowerCase())
-  )
+  // Derive filter options
+  const statusOptions = (["On Track", "At Risk", "Delayed", "Escalated", "Resolved"] as DelayStatus[]).map((s) => ({ label: s, value: s }))
+  const procCommodityOptions = [...new Set(procurementRows.map((r) => r.commodity))].map((c) => ({ label: c, value: c }))
+  const indicatorOptions = (["Blocked", "Behind Schedule", "Not Started", "Partial"] as ProcurementIndicator[]).map((i) => ({ label: i, value: i }))
+  const aggregatorOptions = [...new Set(heatmapData.map((r) => r.aggregator))].map((a) => ({ label: a, value: a }))
+  const severityOptions = (["Major", "Moderate", "Critical", "Minor", "Over"] as FulfillmentSeverity[]).map((s) => ({ label: s, value: s }))
 
-  const filteredFul = fulfillmentRows.filter((r) =>
-    fulSearch === "" ||
-    r.buyer.toLowerCase().includes(fulSearch.toLowerCase()) ||
-    r.commodity.toLowerCase().includes(fulSearch.toLowerCase()) ||
-    r.orderId.toLowerCase().includes(fulSearch.toLowerCase())
-  )
+  const filteredProc = procurementRows.filter((r) => {
+    if (procSearch !== "" && !r.aggregator.toLowerCase().includes(procSearch.toLowerCase()) && !r.commodity.toLowerCase().includes(procSearch.toLowerCase())) return false
+    if (procStatusFilter !== "all" && r.status !== procStatusFilter) return false
+    if (procCommodityFilter !== "all" && r.commodity !== procCommodityFilter) return false
+    if (procIndicatorFilter !== "all" && r.indicator !== procIndicatorFilter) return false
+    return true
+  })
+
+  const filteredFul = fulfillmentRows.filter((r) => {
+    if (fulSearch !== "" && !r.buyer.toLowerCase().includes(fulSearch.toLowerCase()) && !r.commodity.toLowerCase().includes(fulSearch.toLowerCase()) && !r.orderId.toLowerCase().includes(fulSearch.toLowerCase())) return false
+    if (fulStatusFilter !== "all" && r.status !== fulStatusFilter) return false
+    if (fulAggregatorFilter !== "all" && r.buyer !== fulAggregatorFilter) return false
+    if (fulSeverityFilter !== "all" && r.severity !== fulSeverityFilter) return false
+    return true
+  })
 
   return (
     <div className="flex flex-col gap-6">
@@ -675,9 +695,9 @@ export function DelayMonitoringPage() {
               onChange={(e) => { setProcSearch(e.target.value); setProcPage(1) }}
             />
           </div>
-          <FilterPill label="All Status" />
-          <FilterPill label="All Commodity" />
-          <FilterPill label="All Indicator" />
+          <FilterDropdown label="All Status" options={statusOptions} value={procStatusFilter} onChange={(v) => { setProcStatusFilter(v); setProcPage(1) }} allLabel="All Status" />
+          <FilterDropdown label="All Commodity" options={procCommodityOptions} value={procCommodityFilter} onChange={(v) => { setProcCommodityFilter(v); setProcPage(1) }} allLabel="All Commodity" />
+          <FilterDropdown label="All Indicator" options={indicatorOptions} value={procIndicatorFilter} onChange={(v) => { setProcIndicatorFilter(v); setProcPage(1) }} allLabel="All Indicator" />
         </div>
 
         <table className="w-full">
@@ -785,9 +805,9 @@ export function DelayMonitoringPage() {
               onChange={(e) => { setFulSearch(e.target.value); setFulPage(1) }}
             />
           </div>
-          <FilterPill label="All Status" />
-          <FilterPill label="All Aggregators" />
-          <FilterPill label="All Severities" />
+          <FilterDropdown label="All Status" options={statusOptions} value={fulStatusFilter} onChange={(v) => { setFulStatusFilter(v); setFulPage(1) }} allLabel="All Status" />
+          <FilterDropdown label="All Aggregators" options={aggregatorOptions} value={fulAggregatorFilter} onChange={(v) => { setFulAggregatorFilter(v); setFulPage(1) }} allLabel="All Aggregators" />
+          <FilterDropdown label="All Severities" options={severityOptions} value={fulSeverityFilter} onChange={(v) => { setFulSeverityFilter(v); setFulPage(1) }} allLabel="All Severities" />
         </div>
 
         <table className="w-full">
@@ -913,13 +933,3 @@ export function DelayMonitoringPage() {
   )
 }
 
-// ── Shared filter pill ──
-
-function FilterPill({ label }: { label: string }) {
-  return (
-    <button className="flex items-center gap-2 h-9 px-3 py-2 rounded-full bg-[#EDF0E6] text-[14px] leading-[20px] font-normal text-[#161D14] hover:bg-[#E1E4DA] transition-colors">
-      {label}
-      <IconChevronDown className="size-4 text-[#161D14]" />
-    </button>
-  )
-}

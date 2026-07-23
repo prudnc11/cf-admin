@@ -27,6 +27,7 @@ import {
   IconTimeline,
   IconArrowBack,
 } from "@tabler/icons-react"
+import { FilterDropdown, DATE_OPTIONS, isWithinDateRange } from "@/components/ui/filter-dropdown"
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@/components/ui/modal"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
@@ -876,6 +877,9 @@ export function SalesAdminSupplyRequestsPage({ onDetailViewChange, initialTab }:
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedRequest, setSelectedRequest] = useState<SalesSupplyRequest | null>(null)
   const [withdrawTarget, setWithdrawTarget] = useState<SalesSupplyRequest | null>(null)
+  const [dateFilter, setDateFilter] = useState("all")
+  const [regionFilter, setRegionFilter] = useState("all")
+  const [commodityFilter, setCommodityFilter] = useState("all")
   const { toast, showToast, dismissToast } = useToast()
 
   useEffect(() => {
@@ -988,9 +992,16 @@ export function SalesAdminSupplyRequestsPage({ onDetailViewChange, initialTab }:
     )
   }
 
-  const filteredRequests = activeTab === "All"
-    ? requests
-    : requests.filter(r => statusToTab[r.status] === activeTab)
+  const regionOptions = [...new Set(requests.map(r => r.region))].sort().map(r => ({ label: r, value: r }))
+  const commodityOptions = [...new Set(requests.map(r => r.crop))].sort().map(c => ({ label: c, value: c }))
+
+  const filteredRequests = requests.filter(r => {
+    if (activeTab !== "All" && statusToTab[r.status] !== activeTab) return false
+    if (dateFilter !== "all" && !isWithinDateRange(r.createdDate, dateFilter)) return false
+    if (regionFilter !== "all" && r.region !== regionFilter) return false
+    if (commodityFilter !== "all" && r.crop !== commodityFilter) return false
+    return true
+  })
 
   const metricCards = [
     { label: "Total Requests", value: String(requests.length), iconBg: "#D5E6FD", iconColor: "#00439E", icon: IconClipboardCheck },
@@ -1013,20 +1024,9 @@ export function SalesAdminSupplyRequestsPage({ onDetailViewChange, initialTab }:
 
       {/* Filter Bar */}
       <div className="flex items-center gap-4">
-        {[
-          { label: "All time", icon: IconCalendar },
-          { label: "All regions", icon: IconWorld },
-          { label: "All commodities", icon: IconWorld },
-        ].map((f) => {
-          const Icon = f.icon
-          return (
-            <button key={f.label} className="flex items-center gap-2 h-9 px-3 rounded-full bg-[#EDF0E6] text-[14px] leading-[20px] font-normal text-[#161D14]">
-              <Icon className="size-4 text-[#161D14]" />
-              {f.label}
-              <IconChevronDown className="size-4 text-[#161D14]" />
-            </button>
-          )
-        })}
+        <FilterDropdown label="Date" icon={IconCalendar} options={DATE_OPTIONS} value={dateFilter} onChange={setDateFilter} allLabel="All time" />
+        <FilterDropdown label="Region" icon={IconWorld} options={regionOptions} value={regionFilter} onChange={setRegionFilter} allLabel="All regions" />
+        <FilterDropdown label="Commodity" icon={IconWorld} options={commodityOptions} value={commodityFilter} onChange={setCommodityFilter} allLabel="All commodities" />
       </div>
 
       {/* Metrics */}

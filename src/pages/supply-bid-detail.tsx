@@ -1,5 +1,6 @@
 import { useState, Fragment } from "react"
 import type { SupplyBid } from "./supply-bids"
+import { supplyRequests } from "./supply-requests"
 import {
   IconCheck,
   IconChevronUp,
@@ -10,7 +11,6 @@ import {
   IconCalendar,
   IconPackage,
   IconPlant,
-  IconBuildingWarehouse,
   IconRoute,
   IconCash,
   IconFileText,
@@ -20,11 +20,12 @@ import {
   IconDownload,
   IconListDetails,
   IconTimeline,
+  IconMapPin,
 } from "@tabler/icons-react"
 
 // --- Types ---
 
-export type BidModalType = "counter-offer" | "accept-price" | "schedule-visit" | "approve-date" | "log-qa" | "produce-label" | "finance-approve" | "finance-reject" | "attach-proof" | "finance-signoff" | "generate-grn" | "start-routing"
+export type BidModalType = "counter-offer" | "accept-price" | "schedule-visit" | "approve-date" | "log-qa" | "produce-label" | "finance-approve" | "finance-reject" | "attach-proof" | "finance-signoff" | "generate-grn" | "start-routing" | "prefinance-approve" | "prefinance-reject"
 
 // --- Sub-Components ---
 
@@ -447,6 +448,71 @@ export function SupplyBidDetailPage({
                 </CollapsibleSection>
               )}
 
+              {/* 3b. Pre-financing */}
+              {bid.prefinanceStatus && (
+                <CollapsibleSection title="Pre-financing" defaultOpen={bid.prefinanceStatus === "requested"}>
+                  <div className="flex flex-col gap-3 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[6px] ${
+                        bid.prefinanceStatus === "approved" ? "bg-[#D4F5D0]" :
+                        bid.prefinanceStatus === "rejected" ? "bg-[#FEE2E2]" :
+                        "bg-[#FEF0D8]"
+                      }`}>
+                        <span className={`size-[5px] rounded-full ${
+                          bid.prefinanceStatus === "approved" ? "bg-[#1A5514]" :
+                          bid.prefinanceStatus === "rejected" ? "bg-[#DC2626]" :
+                          "bg-[#995917]"
+                        }`} />
+                        <span className={`text-[12px] leading-[18px] font-normal ${
+                          bid.prefinanceStatus === "approved" ? "text-[#1A5514]" :
+                          bid.prefinanceStatus === "rejected" ? "text-[#DC2626]" :
+                          "text-[#995917]"
+                        }`}>
+                          {bid.prefinanceStatus === "approved" ? "Approved" : bid.prefinanceStatus === "rejected" ? "Rejected" : "Pending Review"}
+                        </span>
+                      </span>
+                    </div>
+                    <InfoRow label="Amount Requested" value={bid.prefinanceAmountRequested || "—"} />
+                    {bid.prefinanceStatus === "approved" && (
+                      <>
+                        <InfoRow label="Amount Disbursed" value={bid.prefinanceAmountDisbursed || "—"} />
+                        <div className="flex items-start">
+                          <span className="w-[269px] shrink-0 py-3 text-[16px] leading-[24px] font-bold text-[#1A5514]">Remaining Balance</span>
+                          <span className="flex-1 py-3 text-[16px] leading-[24px] font-bold text-[#1A5514]">
+                            {(() => {
+                              const total = parseFloat(bid.totalValue.replace(/[^0-9.]/g, ""))
+                              const disbursed = parseFloat((bid.prefinanceAmountDisbursed || "0").replace(/[^0-9.]/g, ""))
+                              return `GHS ${(total - disbursed).toLocaleString()}`
+                            })()}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                    {bid.prefinanceStatus === "rejected" && bid.prefinanceRejectionReason && (
+                      <InfoRow label="Rejection Reason" value={bid.prefinanceRejectionReason} />
+                    )}
+                    {bid.prefinanceStatus === "requested" && (
+                      <div className="flex items-center gap-2 pt-1">
+                        <button
+                          onClick={() => onAction?.("prefinance-reject")}
+                          className="flex items-center gap-1.5 h-9 px-4 rounded-lg outline outline-1 outline-[#BA1A1A] text-[#BA1A1A] text-[14px] leading-[20px] font-bold hover:bg-[#FEE2E2] transition-colors"
+                        >
+                          <IconX className="size-4" />
+                          Reject
+                        </button>
+                        <button
+                          onClick={() => onAction?.("prefinance-approve")}
+                          className="flex items-center gap-1.5 h-9 px-4 rounded-lg bg-[#36B92E] text-white text-[14px] leading-[20px] font-bold hover:bg-[#5EC758] transition-colors"
+                        >
+                          <IconCheck className="size-4" />
+                          Approve Pre-financing
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </CollapsibleSection>
+              )}
+
               {/* 4. QA Results */}
               {(si >= stageIndex("field-qa") || bid.stage === "warehouse-qa") && (
                 <CollapsibleSection title="QA Results" defaultOpen={bid.stage === "field-qa" || bid.stage === "warehouse-qa"}>
@@ -496,9 +562,24 @@ export function SupplyBidDetailPage({
               {si >= stageIndex("finance") && (
                 <CollapsibleSection title="Finance & Disbursement" defaultOpen={bid.stage === "finance"}>
                   <FinanceMiniStepper status={bid.financeStatus} />
-                  <InfoRow label="Disbursement Amount" value={bid.totalValue} />
+                  <InfoRow label="Total Bid Value" value={bid.totalValue} />
+                  {bid.prefinanceStatus === "approved" && bid.prefinanceAmountDisbursed && (
+                    <>
+                      <InfoRow label="Pre-financed (deducted)" value={`-${bid.prefinanceAmountDisbursed}`} />
+                      <div className="flex items-start">
+                        <span className="w-[269px] shrink-0 py-3 text-[16px] leading-[24px] font-bold text-[#161D14]">Net Disbursement</span>
+                        <span className="flex-1 py-3 text-[16px] leading-[24px] font-bold text-[#1A5514]">
+                          {(() => {
+                            const total = parseFloat(bid.totalValue.replace(/[^0-9.]/g, ""))
+                            const disbursed = parseFloat((bid.prefinanceAmountDisbursed || "0").replace(/[^0-9.]/g, ""))
+                            return `GHS ${(total - disbursed).toLocaleString()}`
+                          })()}
+                        </span>
+                      </div>
+                    </>
+                  )}
                   <InfoRow label="Payment Method" value="Bank Transfer" />
-                  <InfoRow label="Tranches" value="Full Payment" />
+                  <InfoRow label="Tranches" value={bid.prefinanceStatus === "approved" ? "Pre-financed + Remainder" : "Full Payment"} />
                   {bid.stage === "finance" && (
                     <div className="flex items-center gap-2 py-3">
                       {bid.financeStatus === "awaiting-review" && (
@@ -654,6 +735,29 @@ export function SupplyBidDetailPage({
                     </div>
                   </div>
                 )}
+                {bid.prefinanceStatus && (
+                  <div className="flex items-start gap-3">
+                    <div className={`flex items-center justify-center size-8 rounded-full shrink-0 ${
+                      bid.prefinanceStatus === "approved" ? "bg-[#C9F0D6]" :
+                      bid.prefinanceStatus === "rejected" ? "bg-[#FEE2E2]" :
+                      "bg-[#FEF0D8]"
+                    }`}>
+                      <IconCash className={`size-4 ${
+                        bid.prefinanceStatus === "approved" ? "text-[#00572D]" :
+                        bid.prefinanceStatus === "rejected" ? "text-[#DC2626]" :
+                        "text-[#995917]"
+                      }`} />
+                    </div>
+                    <div className="flex-1 flex flex-col gap-0.5">
+                      <span className="text-[14px] leading-[20px] font-bold text-[#161D14]">
+                        Pre-financing {bid.prefinanceStatus === "approved" ? `Approved — ${bid.prefinanceAmountDisbursed}` : bid.prefinanceStatus === "rejected" ? "Rejected" : "Requested"}
+                      </span>
+                      <span className="text-[12px] leading-[18px] text-[#525C4E]">
+                        {bid.prefinanceStatus === "approved" ? "Funds disbursed before field visit" : bid.prefinanceStatus === "rejected" ? bid.prefinanceRejectionReason || "Request denied" : `Pending review — ${bid.prefinanceAmountRequested}`}
+                      </span>
+                    </div>
+                  </div>
+                )}
                 {bid.qaResult && (
                   <div className="flex items-start gap-3">
                     <div className={`flex items-center justify-center size-8 rounded-full shrink-0 ${bid.qaResult === "pass" ? "bg-[#C9F0D6]" : "bg-[#FEE2E2]"}`}>
@@ -710,51 +814,56 @@ export function SupplyBidDetailPage({
         <div className="w-[320px] shrink-0 pl-8">
           <div className="rounded-[12px] outline outline-1 outline-[#E5E8DF] overflow-hidden sticky top-4">
             <div className="p-4 border-b border-[#E5E8DF]">
-              <h3 className="text-[16px] leading-[24px] font-bold text-[#161D14]">Bid Summary</h3>
+              <h3 className="text-[16px] leading-[24px] font-bold text-[#161D14]">Request Summary</h3>
             </div>
-            <div className="p-4 flex flex-col gap-3">
-              <div className="flex items-center gap-2">
-                <IconFileText className="size-4 text-[#525C4E]" />
-                <span className="text-[14px] leading-[20px] text-[#525C4E]">Supply Request</span>
-                <span className="ml-auto text-[14px] leading-[20px] font-bold text-[#161D14]">{bid.supplyRequestId}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <IconUser className="size-4 text-[#525C4E]" />
-                <span className="text-[14px] leading-[20px] text-[#525C4E]">Aggregator</span>
-                <span className="ml-auto text-[14px] leading-[20px] font-bold text-[#161D14]">{bid.aggregator}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <IconPlant className="size-4 text-[#525C4E]" />
-                <span className="text-[14px] leading-[20px] text-[#525C4E]">Crop</span>
-                <span className="ml-auto text-[14px] leading-[20px] font-bold text-[#161D14]">{bid.crop}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <IconPackage className="size-4 text-[#525C4E]" />
-                <span className="text-[14px] leading-[20px] text-[#525C4E]">Quantity</span>
-                <span className="ml-auto text-[14px] leading-[20px] font-bold text-[#161D14]">{bid.quantity} {bid.unit}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <IconCash className="size-4 text-[#525C4E]" />
-                <span className="text-[14px] leading-[20px] text-[#525C4E]">Price</span>
-                <span className="ml-auto text-[14px] leading-[20px] font-bold text-[#161D14]">{bid.pricePerUnit}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <IconRoute className="size-4 text-[#525C4E]" />
-                <span className="text-[14px] leading-[20px] text-[#525C4E]">Delivery</span>
-                <span className="ml-auto text-[14px] leading-[20px] font-bold text-[#161D14]">{bid.deliveryMethod === "field-visit" ? "Field Visit" : "Warehouse Visit"}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <IconBuildingWarehouse className="size-4 text-[#525C4E]" />
-                <span className="text-[14px] leading-[20px] text-[#525C4E]">Warehouse</span>
-                <span className="ml-auto text-[14px] leading-[20px] font-bold text-[#161D14]">{bid.warehouse}</span>
-              </div>
-              <div className="h-px bg-[#E5E8DF]" />
-              <div className="flex items-center gap-2">
-                <IconCash className="size-4 text-[#525C4E]" />
-                <span className="text-[14px] leading-[20px] text-[#525C4E]">Total Value</span>
-                <span className="ml-auto text-[16px] leading-[24px] font-bold text-[#36B92E]">{bid.totalValue}</span>
-              </div>
-            </div>
+            {(() => {
+              const sr = supplyRequests.find(r => r.id === bid.supplyRequestId)
+              return (
+                <div className="p-4 flex flex-col gap-3">
+                  <div className="flex items-center gap-2">
+                    <IconFileText className="size-4 text-[#525C4E]" />
+                    <span className="text-[14px] leading-[20px] text-[#525C4E]">Request ID</span>
+                    <span className="ml-auto text-[14px] leading-[20px] font-bold text-[#36B92E]">{bid.supplyRequestId}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <IconPlant className="size-4 text-[#525C4E]" />
+                    <span className="text-[14px] leading-[20px] text-[#525C4E]">Crop / Variety</span>
+                    <span className="ml-auto text-[14px] leading-[20px] font-bold text-[#161D14]">{sr ? `${sr.crop} - ${sr.variety}` : bid.crop}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <IconPackage className="size-4 text-[#525C4E]" />
+                    <span className="text-[14px] leading-[20px] text-[#525C4E]">Target Qty</span>
+                    <span className="ml-auto text-[14px] leading-[20px] font-bold text-[#161D14]">{sr ? `${sr.quantity} ${sr.unit}` : `${bid.quantity} ${bid.unit}`}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <IconMapPin className="size-4 text-[#525C4E]" />
+                    <span className="text-[14px] leading-[20px] text-[#525C4E]">Region</span>
+                    <span className="ml-auto text-[14px] leading-[20px] font-bold text-[#161D14]">{sr?.region ?? bid.region}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <IconCash className="size-4 text-[#525C4E]" />
+                    <span className="text-[14px] leading-[20px] text-[#525C4E]">Budget</span>
+                    <span className="ml-auto text-[14px] leading-[20px] font-bold text-[#161D14]">{sr?.budget ?? "—"}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <IconCalendar className="size-4 text-[#525C4E]" />
+                    <span className="text-[14px] leading-[20px] text-[#525C4E]">Window</span>
+                    <span className="ml-auto text-[14px] leading-[20px] font-bold text-[#161D14]">{sr?.aggregationWindow ?? "—"}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <IconUser className="size-4 text-[#525C4E]" />
+                    <span className="text-[14px] leading-[20px] text-[#525C4E]">Created by</span>
+                    <span className="ml-auto text-[14px] leading-[20px] font-bold text-[#161D14]">{sr?.createdBy ?? "—"}</span>
+                  </div>
+                  <div className="h-px bg-[#E5E8DF]" />
+                  <div className="flex items-center gap-2">
+                    <IconClipboardCheck className="size-4 text-[#525C4E]" />
+                    <span className="text-[14px] leading-[20px] text-[#525C4E]">Linked Bids</span>
+                    <span className="ml-auto text-[14px] leading-[20px] font-bold text-[#161D14]">{sr?.linkedBids ?? "—"}</span>
+                  </div>
+                </div>
+              )
+            })()}
           </div>
         </div>
       </div>

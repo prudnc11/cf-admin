@@ -21,6 +21,7 @@ import {
 } from "@tabler/icons-react"
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@/components/ui/modal"
 import { Button } from "@/components/ui/button"
+import { FilterDropdown, DATE_OPTIONS, isWithinDateRange } from "@/components/ui/filter-dropdown"
 import { useToast } from "@/hooks/use-toast"
 import { Toast } from "@/components/ui/toast"
 import { SupplyRequestDetailPage } from "./supply-request-detail"
@@ -132,12 +133,6 @@ export const supplyRequests: SupplyRequest[] = [
 const today = () => new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
 
 // --- Data ---
-
-const filters = [
-  { label: "All time", icon: IconCalendar },
-  { label: "All regions", icon: IconWorld },
-  { label: "All commodities", icon: IconWorld },
-]
 
 const tabIcons: Record<string, typeof IconClipboardCheck> = {
   "All": IconClipboardCheck,
@@ -490,6 +485,9 @@ export function SupplyRequestsPage({ onDetailViewChange, initialTab }: { onDetai
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [modalAction, setModalAction] = useState<ModalAction>(null)
+  const [dateFilter, setDateFilter] = useState("all")
+  const [regionFilter, setRegionFilter] = useState("all")
+  const [commodityFilter, setCommodityFilter] = useState("all")
   const { toast, showToast, dismissToast } = useToast()
 
   const selectedRequest = selectedRequestId ? requests.find(r => r.id === selectedRequestId) ?? null : null
@@ -645,9 +643,16 @@ export function SupplyRequestsPage({ onDetailViewChange, initialTab }: { onDetai
     )
   }
 
-  const filteredRequests = activeTab === "All"
-    ? requests
-    : requests.filter(r => statusToTab[r.status] === activeTab)
+  const regionOptions = [...new Set(requests.map(r => r.region))].sort().map(r => ({ label: r, value: r }))
+  const commodityOptions = [...new Set(requests.map(r => r.crop))].sort().map(c => ({ label: c, value: c }))
+
+  const filteredRequests = requests.filter(r => {
+    if (activeTab !== "All" && statusToTab[r.status] !== activeTab) return false
+    if (dateFilter !== "all" && !isWithinDateRange(r.createdDate, dateFilter)) return false
+    if (regionFilter !== "all" && r.region !== regionFilter) return false
+    if (commodityFilter !== "all" && r.crop !== commodityFilter) return false
+    return true
+  })
 
   return (
     <div className="flex flex-col gap-4">
@@ -662,19 +667,9 @@ export function SupplyRequestsPage({ onDetailViewChange, initialTab }: { onDetai
 
       {/* Filter Bar */}
       <div className="flex items-center gap-4">
-        {filters.map((f) => {
-          const Icon = f.icon
-          return (
-            <button
-              key={f.label}
-              className="flex items-center gap-2 h-9 px-3 rounded-full bg-[#EDF0E6] text-[14px] leading-[20px] font-normal text-[#161D14]"
-            >
-              <Icon className="size-4 text-[#161D14]" />
-              {f.label}
-              <IconChevronDown className="size-4 text-[#161D14]" />
-            </button>
-          )
-        })}
+        <FilterDropdown label="All time" icon={IconCalendar} options={DATE_OPTIONS} value={dateFilter} onChange={setDateFilter} allLabel="All time" />
+        <FilterDropdown label="All regions" icon={IconWorld} options={regionOptions} value={regionFilter} onChange={setRegionFilter} allLabel="All regions" />
+        <FilterDropdown label="All commodities" icon={IconWorld} options={commodityOptions} value={commodityFilter} onChange={setCommodityFilter} allLabel="All commodities" />
       </div>
 
       {/* Metric Cards */}

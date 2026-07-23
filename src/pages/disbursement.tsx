@@ -22,6 +22,7 @@ import {
 import { requests as procurementRequests } from "./procurement-request"
 import type { RequestCard, PipelineStep, ModalType } from "./procurement-request"
 import { ProcurementRequestDetailPage } from "./procurement-request-detail"
+import { FilterDropdown, DATE_OPTIONS, isWithinDateRange } from "@/components/ui/filter-dropdown"
 import { useToast } from "@/hooks/use-toast"
 import { Toast } from "@/components/ui/toast"
 import { FinanceApproveForm } from "@/components/forms/finance-approve-form"
@@ -50,13 +51,6 @@ function deriveFinanceStage(req: RequestCard): DisbursementStage {
 }
 
 // --- Data ---
-
-const filters = [
-  { label: "All time", icon: IconCalendar },
-  { label: "All Aggregators", icon: IconUsers },
-  { label: "All commodities", icon: IconWorld },
-  { label: "All plans", icon: IconFileText },
-]
 
 const disbursementItems: DisbursementItem[] = procurementRequests
   .filter((r) => r.tabCategory === "Finance")
@@ -251,6 +245,14 @@ export function DisbursementPage({ onDetailViewChange, initialTab }: { onDetailV
   const [selectedRequest, setSelectedRequest] = useState<RequestCard | null>(null)
   const [activeModal, setActiveModal] = useState<{ type: ModalType; requestId: string } | null>(null)
   const { toast, showToast, dismissToast } = useToast()
+  const [dateFilter, setDateFilter] = useState("all")
+  const [aggregatorFilter, setAggregatorFilter] = useState("all")
+  const [commodityFilter, setCommodityFilter] = useState("all")
+  const [planFilter, setPlanFilter] = useState("all")
+
+  const aggregatorOptions = [...new Set(disbursementItems.map((d) => d.source.cooperative))].map((v) => ({ label: v, value: v }))
+  const commodityOptions = [...new Set(disbursementItems.map((d) => d.source.commodity))].map((v) => ({ label: v, value: v }))
+  const planOptions = [...new Set(disbursementItems.map((d) => d.source.plan))].map((v) => ({ label: v, value: v }))
 
   useEffect(() => {
     if (initialTab) setActiveTab(initialTab)
@@ -331,26 +333,22 @@ export function DisbursementPage({ onDetailViewChange, initialTab }: { onDetailV
       "Rejected": ["rejected"],
       "Notification Failed": ["notify-failed"],
     }
-    return map[activeTab]?.includes(d.financeStage)
+    if (!map[activeTab]?.includes(d.financeStage)) return false
+    if (dateFilter !== "all" && !isWithinDateRange(d.source.scheduledDate, dateFilter)) return false
+    if (aggregatorFilter !== "all" && d.source.cooperative !== aggregatorFilter) return false
+    if (commodityFilter !== "all" && d.source.commodity !== commodityFilter) return false
+    if (planFilter !== "all" && d.source.plan !== planFilter) return false
+    return true
   })
 
   return (
     <div className="flex flex-col gap-4">
       {/* Filter Bar */}
       <div className="flex items-center gap-4">
-        {filters.map((f) => {
-          const Icon = f.icon
-          return (
-            <button
-              key={f.label}
-              className="flex items-center gap-2 h-9 px-3 rounded-full bg-[#EDF0E6] text-[14px] leading-[20px] font-normal text-[#161D14]"
-            >
-              <Icon className="size-4 text-[#161D14]" />
-              {f.label}
-              <IconChevronDown className="size-4 text-[#161D14]" />
-            </button>
-          )
-        })}
+        <FilterDropdown label="All time" icon={IconCalendar} options={DATE_OPTIONS} value={dateFilter} onChange={setDateFilter} allLabel="All time" />
+        <FilterDropdown label="All Aggregators" icon={IconUsers} options={aggregatorOptions} value={aggregatorFilter} onChange={setAggregatorFilter} allLabel="All Aggregators" />
+        <FilterDropdown label="All commodities" icon={IconWorld} options={commodityOptions} value={commodityFilter} onChange={setCommodityFilter} allLabel="All commodities" />
+        <FilterDropdown label="All plans" icon={IconFileText} options={planOptions} value={planFilter} onChange={setPlanFilter} allLabel="All plans" />
       </div>
 
       {/* Metric Cards */}

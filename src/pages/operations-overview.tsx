@@ -1,6 +1,5 @@
 import {
   IconChevronRight,
-  IconChevronDown,
   IconAlertTriangle,
   IconX,
   IconTrendingUp,
@@ -27,6 +26,7 @@ import {
   LineChart,
 } from "recharts"
 import { useState } from "react"
+import { FilterDropdown, DATE_OPTIONS } from "@/components/ui/filter-dropdown"
 
 // ── Static data ──
 
@@ -457,6 +457,12 @@ function StatusBadge({ status }: { status: CommodityRow["status"] }) {
 
 export function OperationsOverviewPage() {
   const [dismissedAlerts, setDismissedAlerts] = useState<number[]>([])
+  const [dateFilter, setDateFilter] = useState("all")
+  const [aggregatorFilter, setAggregatorFilter] = useState("all")
+  const [commodityFilter, setCommodityFilter] = useState("all")
+
+  const aggregatorOptions = warehouseRows.map((r) => ({ label: r.name, value: r.name }))
+  const commodityOptions = commodityRows.map((r) => ({ label: r.name, value: r.name }))
 
   const visibleAlerts = alerts.filter((_, i) => !dismissedAlerts.includes(i))
 
@@ -467,19 +473,30 @@ export function OperationsOverviewPage() {
     <div className="flex flex-col gap-6">
       {/* Filters */}
       <div className="flex items-center gap-4">
-        {overviewFilters.map((f) => {
-          const Icon = f.icon
-          return (
-            <button
-              key={f.label}
-              className="flex items-center gap-2 h-9 px-3 rounded-full bg-[#EDF0E6] text-[14px] leading-[20px] font-normal text-[#161D14]"
-            >
-              <Icon className="size-4 text-[#161D14]" />
-              {f.label}
-              <IconChevronDown className="size-4 text-[#161D14]" />
-            </button>
-          )
-        })}
+        <FilterDropdown
+          label="All time"
+          icon={IconCalendar}
+          options={DATE_OPTIONS}
+          value={dateFilter}
+          onChange={setDateFilter}
+          allLabel="All time"
+        />
+        <FilterDropdown
+          label="All Aggregators"
+          icon={IconUsers}
+          options={aggregatorOptions}
+          value={aggregatorFilter}
+          onChange={setAggregatorFilter}
+          allLabel="All Aggregators"
+        />
+        <FilterDropdown
+          label="All commodities"
+          icon={IconWorld}
+          options={commodityOptions}
+          value={commodityFilter}
+          onChange={setCommodityFilter}
+          allLabel="All commodities"
+        />
       </div>
 
       {/* Quick actions */}
@@ -657,10 +674,3 @@ export function OperationsOverviewPage() {
   )
 }
 
-// ── Helpers ──
-
-const overviewFilters = [
-  { label: "All time", icon: IconCalendar },
-  { label: "All Aggregators", icon: IconUsers },
-  { label: "All commodities", icon: IconWorld },
-]

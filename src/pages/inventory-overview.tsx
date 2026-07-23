@@ -1,6 +1,5 @@
 import { useState } from "react"
 import {
-  IconChevronDown,
   IconChevronRight,
   IconChevronLeft,
   IconChevronsRight,
@@ -22,6 +21,7 @@ import {
   IconClipboardList,
 } from "@tabler/icons-react"
 import { cn } from "@/lib/utils"
+import { FilterDropdown, DATE_OPTIONS } from "@/components/ui/filter-dropdown"
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@/components/ui/modal"
 import { Button } from "@/components/ui/button"
 import { FormField, FormSelect, FormTextarea } from "@/components/ui/form-fields"
@@ -139,16 +139,6 @@ const TOTAL_ROWS = 68
 const ROWS_PER_PAGE = 10
 
 // ── Subcomponents ──
-
-function FilterButton({ label, icon: Icon }: { label: string; icon?: React.ElementType }) {
-  return (
-    <button className="flex items-center gap-2 h-9 px-3 py-2 rounded-full bg-[#EDF0E6] text-[14px] leading-[20px] font-normal text-[#161D14] hover:bg-[#E1E4DA] transition-colors">
-      {Icon && <Icon className="size-4 text-[#161D14]" />}
-      {label}
-      <IconChevronDown className="size-4 text-[#161D14]" />
-    </button>
-  )
-}
 
 function StatusBadge({ status }: { status: InventoryStatus }) {
   const styles = {
@@ -706,6 +696,42 @@ export function InventoryOverviewPage() {
   const [detailOpen, setDetailOpen] = useState(false)
   const [activeModal, setActiveModal] = useState<{ type: "adjust" | "transfer" | "reorder"; rowIndex: number } | null>(null)
 
+  // Top bar filter state
+  const [dateFilter, setDateFilter] = useState("all")
+  const [aggregatorFilter, setAggregatorFilter] = useState("all")
+  const [commodityFilter, setCommodityFilter] = useState("all")
+  const [planFilter, setPlanFilter] = useState("all")
+
+  // Table filter state
+  const [regionFilter, setRegionFilter] = useState("all")
+  const [tableCommodityFilter, setTableCommodityFilter] = useState("all")
+  const [statusFilter, setStatusFilter] = useState("all")
+
+  // Derive options from data
+  const aggregatorOptions = [...new Set(inventoryRows.map((r) => r.aggregator))].map((a) => ({ label: a, value: a }))
+  const commodityOptions = [...new Set(inventoryRows.map((r) => r.commodity))].map((c) => ({ label: c, value: c }))
+  const regionOptions = [...new Set(inventoryRows.map((r) => r.aggregator))].map((r) => ({ label: r, value: r }))
+  const statusOptions = [
+    { label: "Critical", value: "Critical" },
+    { label: "Low", value: "Low" },
+    { label: "Healthy", value: "Healthy" },
+  ]
+  const planOptions = [
+    { label: "Basic", value: "basic" },
+    { label: "Premium", value: "premium" },
+    { label: "Enterprise", value: "enterprise" },
+  ]
+
+  // Filter table rows
+  const filteredRows = inventoryRows.filter((row) => {
+    if (aggregatorFilter !== "all" && row.aggregator !== aggregatorFilter) return false
+    if (commodityFilter !== "all" && row.commodity !== commodityFilter) return false
+    if (regionFilter !== "all" && row.aggregator !== regionFilter) return false
+    if (tableCommodityFilter !== "all" && row.commodity !== tableCommodityFilter) return false
+    if (statusFilter !== "all" && row.status !== statusFilter) return false
+    return true
+  })
+
   const totalPages = Math.ceil(TOTAL_ROWS / ROWS_PER_PAGE)
   const activeRow = activeModal ? inventoryRows[activeModal.rowIndex] ?? inventoryRows[0] : null
 
@@ -713,10 +739,10 @@ export function InventoryOverviewPage() {
     <div className="flex flex-col gap-6">
       {/* Filters */}
       <div className="flex items-center gap-4">
-        <FilterButton label="All time" icon={IconCalendar} />
-        <FilterButton label="All Aggregators" icon={IconUsers} />
-        <FilterButton label="All commodities" icon={IconPlant} />
-        <FilterButton label="All plans" icon={IconClipboardList} />
+        <FilterDropdown label="All time" icon={IconCalendar} options={DATE_OPTIONS} value={dateFilter} onChange={setDateFilter} allLabel="All time" />
+        <FilterDropdown label="All Aggregators" icon={IconUsers} options={aggregatorOptions} value={aggregatorFilter} onChange={setAggregatorFilter} allLabel="All Aggregators" />
+        <FilterDropdown label="All commodities" icon={IconPlant} options={commodityOptions} value={commodityFilter} onChange={setCommodityFilter} allLabel="All commodities" />
+        <FilterDropdown label="All plans" icon={IconClipboardList} options={planOptions} value={planFilter} onChange={setPlanFilter} allLabel="All plans" />
       </div>
 
       {/* 5 KPI Summary Cards */}
@@ -806,9 +832,9 @@ export function InventoryOverviewPage() {
       <div className="bg-white rounded-[12px] shadow-sm outline outline-1 outline-[#E5E8DF] overflow-hidden">
         {/* Table filters */}
         <div className="flex items-center gap-3 px-6 py-4">
-          <FilterButton label="All region" />
-          <FilterButton label="All commodities" />
-          <FilterButton label="All status" />
+          <FilterDropdown label="All region" options={regionOptions} value={regionFilter} onChange={setRegionFilter} allLabel="All region" />
+          <FilterDropdown label="All commodities" options={commodityOptions} value={tableCommodityFilter} onChange={setTableCommodityFilter} allLabel="All commodities" />
+          <FilterDropdown label="All status" options={statusOptions} value={statusFilter} onChange={setStatusFilter} allLabel="All status" />
         </div>
 
         {/* Table */}
@@ -829,7 +855,7 @@ export function InventoryOverviewPage() {
             </tr>
           </thead>
           <tbody>
-            {inventoryRows.map((row, i) => {
+            {filteredRows.map((row, i) => {
               const stockColor = row.status === "Critical" ? "#BA1A1A" : row.status === "Low" ? "#995917" : "#1A5514"
               return (
                 <tr

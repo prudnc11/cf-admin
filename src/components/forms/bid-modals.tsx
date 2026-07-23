@@ -185,19 +185,21 @@ export function BidScheduleVisitModal({
   open: boolean
   onOpenChange: (open: boolean) => void
   bid: SupplyBid
-  onSubmit: (data: { date: string; teamType: string; assignedTo: string; schedulePickup: boolean }) => void
+  onSubmit: (data: { date: string; teamType: string; assignedTo: string; schedulePickup: boolean; prefinanceRequested: boolean; prefinanceAmount: string }) => void
 }) {
   const [date, setDate] = useState("")
   const [teamType, setTeamType] = useState("")
   const [assignedTo, setAssignedTo] = useState("")
   const [schedulePickup, setSchedulePickup] = useState(false)
-  const canSubmit = !!date && !!teamType && !!assignedTo
+  const [prefinanceRequested, setPrefinanceRequested] = useState(false)
+  const [prefinanceAmount, setPrefinanceAmount] = useState("")
+  const canSubmit = !!date && !!teamType && !!assignedTo && (!prefinanceRequested || !!prefinanceAmount)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!canSubmit) return
-    onSubmit({ date, teamType, assignedTo, schedulePickup })
-    setDate(""); setTeamType(""); setAssignedTo(""); setSchedulePickup(false)
+    onSubmit({ date, teamType, assignedTo, schedulePickup, prefinanceRequested, prefinanceAmount: prefinanceRequested ? `GHS ${prefinanceAmount}` : "" })
+    setDate(""); setTeamType(""); setAssignedTo(""); setSchedulePickup(false); setPrefinanceRequested(false); setPrefinanceAmount("")
   }
 
   const isField = bid.deliveryMethod === "field-visit"
@@ -257,8 +259,24 @@ export function BidScheduleVisitModal({
                   </FormCheckbox>
                 )}
 
+                <FormCheckbox checked={prefinanceRequested} onChange={setPrefinanceRequested} variant="success">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[14px] leading-[20px] font-bold text-[#161D14]">Request Pre-financing</span>
+                    <span className="text-[12px] leading-[18px] text-[#525C4E]">Request upfront funds to be disbursed before the {isField ? "field visit" : "delivery"}</span>
+                  </div>
+                </FormCheckbox>
+
+                {prefinanceRequested && (
+                  <FormField label="Pre-finance amount">
+                    <div className="flex items-center">
+                      <span className="h-[48px] px-4 flex items-center rounded-l-[12px] bg-[#D9DDD3] text-[16px] text-[#525C4E]">GHS</span>
+                      <FormInput value={prefinanceAmount} onChange={(e) => setPrefinanceAmount(e.target.value)} placeholder="0.00" className="rounded-l-none" />
+                    </div>
+                  </FormField>
+                )}
+
                 <InfoCallout>
-                  The aggregator will be notified of the scheduled {isField ? "visit" : "delivery"} date. After {isField ? "the visit" : "delivery"}, the QA step begins.
+                  The aggregator will be notified of the scheduled {isField ? "visit" : "delivery"} date. After {isField ? "the visit" : "delivery"}, the QA step begins.{prefinanceRequested ? " The pre-financing request will be sent to the Finance Admin for approval." : ""}
                 </InfoCallout>
               </div>
             </div>
@@ -993,11 +1011,11 @@ export function RateCycleModal({
 }) {
   const [ratings, setRatings] = useState<Record<string, number>>({})
   const [comment, setComment] = useState("")
-  const allRated = cycleQuestions.every(q => ratings[q.key] > 0)
+  const allCycleRated = cycleQuestions.every(q => ratings[q.key] > 0)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!allRated) return
+    if (!allCycleRated) return
     onSubmit({ ratings, comment })
     setRatings({}); setComment("")
   }
@@ -1047,9 +1065,145 @@ export function RateCycleModal({
           </ModalBody>
           <ModalFooter>
             <Button type="button" variant="ghost" size="md" shape="rect" onClick={onSkip}>Skip for now</Button>
-            <Button type="submit" size="md" shape="rect" disabled={!allRated}>
+            <Button type="submit" size="md" shape="rect" disabled={!allCycleRated}>
               Submit Rating
               <IconCheck className="size-5" />
+            </Button>
+          </ModalFooter>
+        </form>
+      </ModalContent>
+    </Modal>
+  )
+}
+
+// --- 14. Pre-finance Approve Modal ---
+
+export function PrefinanceApproveModal({
+  open,
+  onOpenChange,
+  bid,
+  onSubmit,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  bid: SupplyBid
+  onSubmit: (data: { disbursedAmount: string }) => void
+}) {
+  const [disbursedAmount, setDisbursedAmount] = useState("")
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!disbursedAmount) return
+    onSubmit({ disbursedAmount: `GHS ${disbursedAmount}` })
+    setDisbursedAmount("")
+  }
+
+  return (
+    <Modal open={open} onOpenChange={onOpenChange}>
+      <ModalContent>
+        <form onSubmit={handleSubmit}>
+          <ModalHeader title="Approve Pre-financing" onClose={() => onOpenChange(false)} />
+          <ModalBody>
+            <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-1">
+                <h2 className="text-[20px] leading-[28px] font-bold tracking-[0.1px] text-[#161D14]">
+                  {bid.aggregator} - {bid.crop} {bid.quantity} {bid.unit}
+                </h2>
+                <p className="text-[14px] leading-[20px] text-[#525C4E]">
+                  {bid.id} &bull; Requested: {bid.prefinanceAmountRequested}
+                </p>
+              </div>
+
+              <BidSummaryCard bid={bid} />
+
+              <div className="p-4 bg-[#FEF0D8] rounded-[12px] flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[14px] leading-[20px] text-[#995917]">Amount Requested</span>
+                  <span className="text-[16px] leading-[24px] font-bold text-[#995917]">{bid.prefinanceAmountRequested}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[14px] leading-[20px] text-[#995917]">Total Bid Value</span>
+                  <span className="text-[16px] leading-[24px] font-bold text-[#995917]">{bid.totalValue}</span>
+                </div>
+              </div>
+
+              <FormField label="Amount to disburse">
+                <div className="flex items-center">
+                  <span className="h-[48px] px-4 flex items-center rounded-l-[12px] bg-[#D9DDD3] text-[16px] text-[#525C4E]">GHS</span>
+                  <FormInput value={disbursedAmount} onChange={(e) => setDisbursedAmount(e.target.value)} placeholder="0.00" className="rounded-l-none" />
+                </div>
+              </FormField>
+
+              <InfoCallout>
+                The disbursed amount will be deducted from the final payment after GRN generation. The field ops team will be notified of the approval.
+              </InfoCallout>
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <Button type="button" variant="secondary" size="md" shape="rect" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="submit" size="md" shape="rect" disabled={!disbursedAmount}>
+              Approve & Disburse
+              <IconCheck className="size-5" />
+            </Button>
+          </ModalFooter>
+        </form>
+      </ModalContent>
+    </Modal>
+  )
+}
+
+// --- 15. Pre-finance Reject Modal ---
+
+export function PrefinanceRejectModal({
+  open,
+  onOpenChange,
+  bid,
+  onSubmit,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  bid: SupplyBid
+  onSubmit: (data: { reason: string }) => void
+}) {
+  const [reason, setReason] = useState("")
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!reason.trim()) return
+    onSubmit({ reason })
+    setReason("")
+  }
+
+  return (
+    <Modal open={open} onOpenChange={onOpenChange}>
+      <ModalContent>
+        <form onSubmit={handleSubmit}>
+          <ModalHeader title="Reject Pre-financing" onClose={() => onOpenChange(false)} />
+          <ModalBody>
+            <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-1">
+                <h2 className="text-[20px] leading-[28px] font-bold tracking-[0.1px] text-[#161D14]">
+                  {bid.aggregator} - {bid.crop} {bid.quantity} {bid.unit}
+                </h2>
+                <p className="text-[14px] leading-[20px] text-[#525C4E]">
+                  {bid.id} &bull; Requested: {bid.prefinanceAmountRequested}
+                </p>
+              </div>
+
+              <WarningCallout>
+                Rejecting will deny the pre-financing request. The field visit can still proceed without upfront funds. The field ops team will be notified with your reason.
+              </WarningCallout>
+
+              <FormField label="Reason for rejection">
+                <FormTextarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Explain why the pre-financing request is being rejected..." />
+              </FormField>
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <Button type="button" variant="secondary" size="md" shape="rect" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="submit" variant="destructive" size="md" shape="rect" disabled={!reason.trim()}>
+              Reject Pre-financing
+              <IconX className="size-5" />
             </Button>
           </ModalFooter>
         </form>

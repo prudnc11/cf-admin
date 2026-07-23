@@ -19,6 +19,7 @@ import {
   IconMessages,
   IconCircleCheck,
 } from "@tabler/icons-react"
+import { FilterDropdown, DATE_OPTIONS, isWithinDateRange } from "@/components/ui/filter-dropdown"
 import { useToast } from "@/hooks/use-toast"
 import { Toast } from "@/components/ui/toast"
 import { SupplyBidDetailPage } from "./supply-bid-detail"
@@ -37,6 +38,8 @@ import {
   BidProduceLabelModal,
   RateQAModal,
   RateCycleModal,
+  PrefinanceApproveModal,
+  PrefinanceRejectModal,
 } from "@/components/forms/bid-modals"
 import { addRating, addSignal } from "./aggregator-profile"
 import type { AggregatorRating } from "./aggregator-profile"
@@ -84,6 +87,11 @@ export type SupplyBid = {
   region: string
   warehouse: string
   aggregatorScore?: number
+  // Pre-financing
+  prefinanceStatus?: "requested" | "approved" | "rejected"
+  prefinanceAmountRequested?: string
+  prefinanceAmountDisbursed?: string
+  prefinanceRejectionReason?: string
 }
 
 // --- Helpers ---
@@ -172,6 +180,7 @@ export const supplyBids: SupplyBid[] = [
       { by: "aggregator", price: "GHS 1,500/MT", date: "08 Jun 2026", note: "Accepted" },
     ],
     scheduledDate: "20 Jun 2026", region: "Northern Region", warehouse: "Tamale Hub",
+    prefinanceStatus: "requested", prefinanceAmountRequested: "GHS 45,000",
   },
   {
     id: "BID-2026-008", supplyRequestId: "SR-2026-004", aggregator: "Yendi Women Coop", crop: "Shea", variety: "Shea Nuts",
@@ -306,6 +315,7 @@ export const supplyBids: SupplyBid[] = [
     ],
     scheduledDate: "12 Jun 2026", region: "Northern Region", warehouse: "Yagaba Collection Point",
     produceLabel: "Export",
+    prefinanceStatus: "approved", prefinanceAmountRequested: "GHS 100,000", prefinanceAmountDisbursed: "GHS 80,000",
   },
   {
     id: "BID-2026-014", supplyRequestId: "SR-2026-002", aggregator: "Assin Fosu Coop", crop: "Cocoa", variety: "Amelonado",
@@ -333,12 +343,6 @@ export const supplyBids: SupplyBid[] = [
 
 // --- Data ---
 
-const filters = [
-  { label: "All time", icon: IconCalendar },
-  { label: "All Aggregators", icon: IconUsers },
-  { label: "All commodities", icon: IconWorld },
-  { label: "All requests", icon: IconFileText },
-]
 
 function stageToTab(stage: BidStage): string {
   switch (stage) {
@@ -763,6 +767,10 @@ export function SupplyBidsPage({ onDetailViewChange, initialTab, onNavigateToPro
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [selectedBidId, setSelectedBidId] = useState<string | null>(null)
   const [modalState, setModalState] = useState<ModalState>(null)
+  const [dateFilter, setDateFilter] = useState("all")
+  const [aggregatorFilter, setAggregatorFilter] = useState("all")
+  const [commodityFilter, setCommodityFilter] = useState("all")
+  const [requestFilter, setRequestFilter] = useState("all")
   const { toast, showToast, dismissToast } = useToast()
 
   const selectedBid = selectedBidId ? bids.find(b => b.id === selectedBidId) ?? null : null
@@ -819,7 +827,7 @@ export function SupplyBidsPage({ onDetailViewChange, initialTab, onNavigateToPro
     showToast("Counter offer sent to aggregator")
   }
 
-  const handleScheduleVisit = (data: { date: string; teamType: string; assignedTo: string; schedulePickup: boolean }) => {
+  const handleScheduleVisit = (data: { date: string; teamType: string; assignedTo: string; schedulePickup: boolean; prefinanceRequested: boolean; prefinanceAmount: string }) => {
     if (!modalState || !modalBid) return
     const nextStage: BidStage = modalBid.deliveryMethod === "field-visit" ? "field-qa" : "warehouse-qa"
     updateBid(modalState.bidId, (b) => ({
@@ -828,9 +836,13 @@ export function SupplyBidsPage({ onDetailViewChange, initialTab, onNavigateToPro
       pipeline: makePipeline(stageToIndex(nextStage)),
       scheduledDate: new Date(data.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
       scheduledVisitType: data.teamType,
+      ...(data.prefinanceRequested ? {
+        prefinanceStatus: "requested" as const,
+        prefinanceAmountRequested: data.prefinanceAmount,
+      } : {}),
     }))
     setModalState(null)
-    showToast("Visit scheduled — bid moved to QA")
+    showToast(data.prefinanceRequested ? "Visit scheduled — pre-financing request sent to Finance" : "Visit scheduled — bid moved to QA")
   }
 
   const handleLogQA = (data: { result: "pass" | "fail"; grade: string; moisture: string; notes: string }) => {
@@ -934,6 +946,28 @@ export function SupplyBidsPage({ onDetailViewChange, initialTab, onNavigateToPro
     showToast("Finance signed off — generate GRN next")
   }
 
+  const handlePrefinanceApprove = (data: { disbursedAmount: string }) => {
+    if (!modalState) return
+    updateBid(modalState.bidId, (b) => ({
+      ...b,
+      prefinanceStatus: "approved",
+      prefinanceAmountDisbursed: data.disbursedAmount,
+    }))
+    setModalState(null)
+    showToast(`Pre-financing approved — ${data.disbursedAmount} disbursed`)
+  }
+
+  const handlePrefinanceReject = (data: { reason: string }) => {
+    if (!modalState) return
+    updateBid(modalState.bidId, (b) => ({
+      ...b,
+      prefinanceStatus: "rejected",
+      prefinanceRejectionReason: data.reason,
+    }))
+    setModalState(null)
+    showToast("Pre-financing rejected — field ops notified")
+  }
+
   const handleGenerateGRN = () => {
     if (!modalState) return
     const grnNum = `GRN-2026-${String(Math.floor(Math.random() * 900) + 100).padStart(3, "0")}`
@@ -1033,9 +1067,18 @@ export function SupplyBidsPage({ onDetailViewChange, initialTab, onNavigateToPro
     )
   }
 
-  const filteredBids = activeTab === "All Bids"
-    ? bids
-    : bids.filter(b => stageToTab(b.stage) === activeTab)
+  const aggregatorOptions = [...new Set(bids.map(b => b.aggregator))].sort().map(a => ({ label: a, value: a }))
+  const commodityOptions = [...new Set(bids.map(b => b.crop))].sort().map(c => ({ label: c, value: c }))
+  const requestOptions = [...new Set(bids.map(b => b.supplyRequestId))].sort().map(r => ({ label: r, value: r }))
+
+  const filteredBids = bids.filter(b => {
+    if (activeTab !== "All Bids" && stageToTab(b.stage) !== activeTab) return false
+    if (dateFilter !== "all" && !isWithinDateRange(b.submittedDate, dateFilter)) return false
+    if (aggregatorFilter !== "all" && b.aggregator !== aggregatorFilter) return false
+    if (commodityFilter !== "all" && b.crop !== commodityFilter) return false
+    if (requestFilter !== "all" && b.supplyRequestId !== requestFilter) return false
+    return true
+  })
 
   function renderModals() {
     if (!modalBid || !modalState) return null
@@ -1121,6 +1164,18 @@ export function SupplyBidsPage({ onDetailViewChange, initialTab, onNavigateToPro
           onSubmit={handleRateCycle}
           onSkip={handleSkipCycleRating}
         />
+        <PrefinanceApproveModal
+          open={modalState.type === "prefinance-approve"}
+          onOpenChange={(v) => !v && setModalState(null)}
+          bid={modalBid}
+          onSubmit={handlePrefinanceApprove}
+        />
+        <PrefinanceRejectModal
+          open={modalState.type === "prefinance-reject"}
+          onOpenChange={(v) => !v && setModalState(null)}
+          bid={modalBid}
+          onSubmit={handlePrefinanceReject}
+        />
       </>
     )
   }
@@ -1132,16 +1187,38 @@ export function SupplyBidsPage({ onDetailViewChange, initialTab, onNavigateToPro
 
       {/* Filter Bar */}
       <div className="flex items-center gap-4">
-        {filters.map((f) => {
-          const Icon = f.icon
-          return (
-            <button key={f.label} className="flex items-center gap-2 h-9 px-3 rounded-full bg-[#EDF0E6] text-[14px] leading-[20px] font-normal text-[#161D14]">
-              <Icon className="size-4 text-[#161D14]" />
-              {f.label}
-              <IconChevronDown className="size-4 text-[#161D14]" />
-            </button>
-          )
-        })}
+        <FilterDropdown
+          label="All time"
+          icon={IconCalendar}
+          options={DATE_OPTIONS}
+          value={dateFilter}
+          onChange={setDateFilter}
+          allLabel="All time"
+        />
+        <FilterDropdown
+          label="All Aggregators"
+          icon={IconUsers}
+          options={aggregatorOptions}
+          value={aggregatorFilter}
+          onChange={setAggregatorFilter}
+          allLabel="All Aggregators"
+        />
+        <FilterDropdown
+          label="All commodities"
+          icon={IconWorld}
+          options={commodityOptions}
+          value={commodityFilter}
+          onChange={setCommodityFilter}
+          allLabel="All commodities"
+        />
+        <FilterDropdown
+          label="All requests"
+          icon={IconFileText}
+          options={requestOptions}
+          value={requestFilter}
+          onChange={setRequestFilter}
+          allLabel="All requests"
+        />
       </div>
 
       {/* Metric Cards */}
