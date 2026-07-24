@@ -2,6 +2,8 @@ import { useState, Fragment } from "react"
 import type { SupplyRequest } from "./supply-requests"
 import { supplyBids } from "./supply-bids"
 import type { SupplyBid } from "./supply-bids"
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@/components/ui/modal"
+import { Button } from "@/components/ui/button"
 import {
   IconCheck,
   IconChevronUp,
@@ -19,6 +21,8 @@ import {
   IconDownload,
   IconListDetails,
   IconTimeline,
+  IconPlus,
+  IconSearch,
 } from "@tabler/icons-react"
 
 // --- Sub-Components ---
@@ -179,6 +183,249 @@ function bidStageColor(s: string): "green" | "blue" | "red" | "warning" {
   }
 }
 
+// --- Aggregator Options (from aggregator-management mock data, active only) ---
+
+const aggregatorOptions = [
+  { name: "Bismark Amoateng", region: "Kumasi", tier: "PLATINUM" },
+  { name: "Sophia Bennett", region: "Greater Accra", tier: "PLATINUM" },
+  { name: "Noah Thompson", region: "Greater Accra", tier: "PLATINUM" },
+  { name: "Lucas Harrington", region: "Volta", tier: "PLATINUM" },
+  { name: "Emma Johnson", region: "Volta", tier: "PLATINUM" },
+  { name: "Oliver Davis", region: "Volta", tier: "PLATINUM" },
+  { name: "Ava Wilson", region: "Kumasi", tier: "PLATINUM" },
+  { name: "Tetteh Cooperative", region: "Volta Region", tier: "GOLD" },
+  { name: "Wa Agric Group", region: "Upper West Region", tier: "SILVER" },
+  { name: "Kumasi Farmers", region: "Ashanti Region", tier: "GOLD" },
+  { name: "Sefwi Growers", region: "Western North Region", tier: "SILVER" },
+  { name: "Ejura Cooperative", region: "Ashanti Region", tier: "GOLD" },
+]
+
+const tierColors: Record<string, { bg: string; text: string }> = {
+  PLATINUM: { bg: "#E2D1FD", text: "#7925CC" },
+  GOLD: { bg: "#FEF0D8", text: "#995917" },
+  SILVER: { bg: "white", text: "#525C4E" },
+  BRONZE: { bg: "#D5E6FD", text: "#00439E" },
+}
+
+// --- Assign Bid Modal ---
+
+function AssignBidModal({
+  open,
+  onClose,
+  onSubmit,
+  request,
+}: {
+  open: boolean
+  onClose: () => void
+  onSubmit: (data: {
+    aggregator: string
+    quantity: string
+    unit: string
+    pricePerUnit: string
+    deliveryMethod: "field-visit" | "warehouse-visit"
+    region: string
+    warehouse: string
+  }) => void
+  request: SupplyRequest
+}) {
+  const [aggregator, setAggregator] = useState("")
+  const [search, setSearch] = useState("")
+  const [quantity, setQuantity] = useState("")
+  const [unit, setUnit] = useState(request.unit)
+  const [pricePerUnit, setPricePerUnit] = useState("")
+  const [deliveryMethod, setDeliveryMethod] = useState<"field-visit" | "warehouse-visit">("field-visit")
+  const [region, setRegion] = useState(request.region)
+  const [warehouse, setWarehouse] = useState("")
+
+  const filteredAggregators = aggregatorOptions.filter(a =>
+    a.name.toLowerCase().includes(search.toLowerCase()) ||
+    a.region.toLowerCase().includes(search.toLowerCase())
+  )
+
+  const canSubmit = aggregator && quantity && pricePerUnit && warehouse
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!canSubmit) return
+    onSubmit({ aggregator, quantity, unit, pricePerUnit, deliveryMethod, region, warehouse })
+    setAggregator(""); setSearch(""); setQuantity(""); setPricePerUnit(""); setWarehouse("")
+  }
+
+  const inputClass = "w-full h-10 px-3 rounded-lg outline outline-1 outline-[#E5E8DF] bg-white text-[14px] leading-[20px] text-[#161D14] placeholder:text-[#525C4E] focus:outline-[#36B92E]"
+  const labelClass = "text-[14px] leading-[20px] font-bold text-[#161D14]"
+
+  return (
+    <Modal open={open} onOpenChange={(o) => !o && onClose()}>
+      <ModalContent>
+        <form onSubmit={handleSubmit}>
+          <ModalHeader title="Assign Bid to Aggregator" onClose={onClose} />
+          <ModalBody>
+            <div className="flex flex-col gap-4 pb-2">
+              {/* Request context */}
+              <div className="p-3 rounded-[12px] bg-[#F7FAF6] flex items-center gap-3">
+                <div className="flex items-center justify-center size-8 rounded-full bg-[#235C4B] shrink-0">
+                  <span className="text-[14px] leading-[20px] font-bold text-[#CEFFEB]">{request.crop.charAt(0)}</span>
+                </div>
+                <div className="flex-1">
+                  <span className="text-[14px] leading-[20px] font-bold text-[#161D14]">{request.crop} • {request.id}</span>
+                  <p className="text-[12px] leading-[18px] text-[#525C4E]">{request.variety} • {request.quantity} {request.unit} • {request.region}</p>
+                </div>
+              </div>
+
+              {/* Aggregator selection */}
+              <div className="flex flex-col gap-1.5">
+                <label className={labelClass}>Select Aggregator *</label>
+                {aggregator ? (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#D4F5D0] outline outline-1 outline-[#36B92E]">
+                    <div className="flex items-center justify-center size-7 rounded-full bg-[#235C4B] shrink-0">
+                      <span className="text-[12px] font-bold text-[#CEFFEB]">{aggregator.charAt(0)}</span>
+                    </div>
+                    <span className="flex-1 text-[14px] leading-[20px] font-bold text-[#161D14]">{aggregator}</span>
+                    <button type="button" onClick={() => setAggregator("")} className="text-[#525C4E] hover:text-[#DC2626]">
+                      <IconX className="size-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="relative">
+                      <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-[#525C4E] pointer-events-none" />
+                      <input
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="Search by name or region..."
+                        className={`${inputClass} pl-9`}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1 max-h-[160px] overflow-y-auto rounded-lg outline outline-1 outline-[#E5E8DF]">
+                      {filteredAggregators.map((a) => {
+                        const tc = tierColors[a.tier] || tierColors.SILVER
+                        return (
+                          <button
+                            key={a.name}
+                            type="button"
+                            onClick={() => { setAggregator(a.name); setSearch("") }}
+                            className="flex items-center gap-2 px-3 py-2 hover:bg-[#F7FAF6] transition-colors text-left"
+                          >
+                            <div className="flex items-center justify-center size-7 rounded-full bg-[#235C4B] shrink-0">
+                              <span className="text-[12px] font-bold text-[#CEFFEB]">{a.name.charAt(0)}</span>
+                            </div>
+                            <div className="flex-1 flex flex-col">
+                              <span className="text-[13px] leading-[18px] font-bold text-[#161D14]">{a.name}</span>
+                              <span className="text-[11px] leading-[16px] text-[#525C4E]">{a.region}</span>
+                            </div>
+                            <span className="px-1.5 py-px rounded-[4px] text-[10px] leading-[14px] font-bold" style={{ background: tc.bg, color: tc.text }}>
+                              {a.tier}
+                            </span>
+                          </button>
+                        )
+                      })}
+                      {filteredAggregators.length === 0 && (
+                        <p className="px-3 py-3 text-[13px] text-[#525C4E] text-center">No aggregators found</p>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Quantity & Price */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className={labelClass}>Quantity *</label>
+                  <div className="flex">
+                    <input type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="0" className={`${inputClass} rounded-r-none`} />
+                    <select value={unit} onChange={(e) => setUnit(e.target.value)} className="h-10 px-2 rounded-r-lg outline outline-1 outline-[#E5E8DF] bg-[#EDF0E6] text-[13px] text-[#525C4E]">
+                      <option value="MT">MT</option>
+                      <option value="KG">KG</option>
+                      <option value="Bags">Bags</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className={labelClass}>Price per Unit *</label>
+                  <div className="flex">
+                    <span className="h-10 px-3 flex items-center rounded-l-lg bg-[#EDF0E6] outline outline-1 outline-[#E5E8DF] text-[13px] text-[#525C4E]">GHS</span>
+                    <input type="number" value={pricePerUnit} onChange={(e) => setPricePerUnit(e.target.value)} placeholder="0" className={`${inputClass} rounded-l-none`} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Delivery Method */}
+              <div className="flex flex-col gap-1.5">
+                <label className={labelClass}>Delivery Method</label>
+                <div className="flex items-center gap-3">
+                  {([["field-visit", "Field Visit"], ["warehouse-visit", "Warehouse Visit"]] as const).map(([val, label]) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setDeliveryMethod(val)}
+                      className={`flex items-center gap-2 px-4 py-2.5 rounded-[12px] border text-[14px] leading-[20px] transition-colors ${
+                        deliveryMethod === val
+                          ? "border-[#36B92E] bg-[#D4F5D0] font-bold text-[#1A5514]"
+                          : "border-[#C3C8BC] bg-white text-[#525C4E] hover:border-[#8B9185]"
+                      }`}
+                    >
+                      <div className={`size-4 rounded-full border-2 flex items-center justify-center ${deliveryMethod === val ? "border-[#36B92E]" : "border-[#C3C8BC]"}`}>
+                        {deliveryMethod === val && <div className="size-2 rounded-full bg-[#36B92E]" />}
+                      </div>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Region & Warehouse */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className={labelClass}>Region</label>
+                  <select value={region} onChange={(e) => setRegion(e.target.value)} className={inputClass}>
+                    {["Volta Region", "Ashanti Region", "Brong-Ahafo Region", "Northern Region", "Upper East Region", "Upper West Region", "Eastern Region", "Bono Region", "Bono East Region", "Western North Region", "Greater Accra Region", "Central Region"].map(r => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className={labelClass}>Warehouse *</label>
+                  <input value={warehouse} onChange={(e) => setWarehouse(e.target.value)} placeholder="e.g. Hohoe Warehouse" className={inputClass} />
+                </div>
+              </div>
+
+              {/* Summary preview */}
+              {canSubmit && (
+                <div className="p-3 rounded-[12px] bg-[#F7FAF6] border border-[#E5E8DF] flex flex-col gap-1">
+                  <span className="text-[12px] leading-[18px] font-bold text-[#525C4E] uppercase tracking-wide">Bid Preview</span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[13px] text-[#525C4E]">Aggregator</span>
+                    <span className="text-[13px] font-bold text-[#161D14]">{aggregator}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[13px] text-[#525C4E]">Quantity</span>
+                    <span className="text-[13px] font-bold text-[#161D14]">{quantity} {unit}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[13px] text-[#525C4E]">Price</span>
+                    <span className="text-[13px] font-bold text-[#161D14]">GHS {Number(pricePerUnit).toLocaleString()}/{unit}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[13px] text-[#525C4E]">Total Value</span>
+                    <span className="text-[13px] font-bold text-[#36B92E]">GHS {(Number(quantity) * Number(pricePerUnit)).toLocaleString()}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <Button type="button" variant="secondary" size="md" shape="rect" onClick={onClose}>Cancel</Button>
+            <Button type="submit" size="md" shape="rect" disabled={!canSubmit}>
+              <IconPlus className="size-4" />
+              Assign Bid
+            </Button>
+          </ModalFooter>
+        </form>
+      </ModalContent>
+    </Modal>
+  )
+}
+
 // --- Linked Bid Card ---
 
 function LinkedBidCard({ bid, index }: { bid: SupplyBid; index: number }) {
@@ -218,10 +465,12 @@ export function SupplyRequestDetailPage({
   onBack,
   request,
   onAction,
+  onAssignBid,
 }: {
   onBack: () => void
   request: SupplyRequest
   onAction?: (action: string, req: SupplyRequest) => void
+  onAssignBid?: (data: { aggregator: string; quantity: string; unit: string; pricePerUnit: string; deliveryMethod: "field-visit" | "warehouse-visit"; region: string; warehouse: string }, request: SupplyRequest) => void
 }) {
   const linkedBids = supplyBids.filter(b => b.supplyRequestId === request.id)
   const activeBids = linkedBids.filter(b => b.stage !== "rejected" && b.stage !== "completed")
@@ -229,6 +478,7 @@ export function SupplyRequestDetailPage({
   const totalBidQty = linkedBids.reduce((sum, b) => sum + parseFloat(b.quantity), 0)
 
   const [activeTab, setActiveTab] = useState<"details" | "audit">("details")
+  const [showAssignBidModal, setShowAssignBidModal] = useState(false)
 
   const primaryBtnClass = "inline-flex items-center gap-[8px] h-[36px] px-[12px] py-[8px] rounded-[8px] bg-[#36B92E] text-white text-[14px] leading-[20px] font-bold hover:bg-[#5EC758] transition-colors"
   const outlineBtnClass = "inline-flex items-center gap-[8px] h-[36px] px-[12px] py-[8px] rounded-[8px] outline outline-1 outline-[#E5E8DF] text-[#161D14] text-[14px] leading-[20px] font-bold hover:bg-[#F7FAF6] transition-colors"
@@ -298,6 +548,12 @@ export function SupplyRequestDetailPage({
                 Activate
               </button>
             </>
+          )}
+          {(request.status === "active" || request.status === "in-progress") && (
+            <button onClick={() => setShowAssignBidModal(true)} className={primaryBtnClass}>
+              <IconPlus className="size-[16px]" />
+              Assign Bid
+            </button>
           )}
         </div>
       </div>
@@ -537,6 +793,17 @@ export function SupplyRequestDetailPage({
           </div>
         </div>
       </div>
+
+      {/* Assign Bid Modal */}
+      <AssignBidModal
+        open={showAssignBidModal}
+        onClose={() => setShowAssignBidModal(false)}
+        request={request}
+        onSubmit={(data) => {
+          onAssignBid?.(data, request)
+          setShowAssignBidModal(false)
+        }}
+      />
     </div>
   )
 }

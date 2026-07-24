@@ -25,6 +25,8 @@ import { FilterDropdown, DATE_OPTIONS, isWithinDateRange } from "@/components/ui
 import { useToast } from "@/hooks/use-toast"
 import { Toast } from "@/components/ui/toast"
 import { SupplyRequestDetailPage } from "./supply-request-detail"
+import { supplyBids, makePipeline } from "./supply-bids"
+import type { SupplyBid } from "./supply-bids"
 
 // --- Types ---
 
@@ -587,6 +589,41 @@ export function SupplyRequestsPage({ onDetailViewChange, initialTab }: { onDetai
     showToast(`${newId} created as draft`)
   }
 
+  // --- Assign bid handler ---
+  const handleAssignBid = (
+    data: { aggregator: string; quantity: string; unit: string; pricePerUnit: string; deliveryMethod: "field-visit" | "warehouse-visit"; region: string; warehouse: string },
+    request: SupplyRequest
+  ) => {
+    const newBidId = `BID-2026-${String(supplyBids.length + 1).padStart(3, "0")}`
+    const totalValue = Number(data.quantity) * Number(data.pricePerUnit)
+    const newBid: SupplyBid = {
+      id: newBidId,
+      supplyRequestId: request.id,
+      aggregator: data.aggregator,
+      crop: request.crop,
+      variety: request.variety,
+      quantity: data.quantity,
+      unit: data.unit,
+      pricePerUnit: `GHS ${Number(data.pricePerUnit).toLocaleString()}/${data.unit}`,
+      totalValue: `GHS ${totalValue.toLocaleString()}`,
+      deliveryMethod: data.deliveryMethod,
+      stage: "submitted",
+      submittedDate: today(),
+      pipeline: makePipeline(0),
+      negotiations: [],
+      region: data.region,
+      warehouse: data.warehouse,
+    }
+    supplyBids.push(newBid)
+    // Update linked bids count
+    updateRequest(request.id, (r) => ({
+      ...r,
+      linkedBids: r.linkedBids + 1,
+      status: r.status === "active" ? "in-progress" : r.status,
+    }))
+    showToast(`${newBidId} assigned to ${data.aggregator}`)
+  }
+
   // --- Dynamic metrics ---
   const tabItems = [
     { label: "All", badge: requests.length },
@@ -623,6 +660,7 @@ export function SupplyRequestsPage({ onDetailViewChange, initialTab }: { onDetai
           onBack={() => setSelectedRequestId(null)}
           request={selectedRequest}
           onAction={handleAction}
+          onAssignBid={handleAssignBid}
         />
         {/* Confirmation modals in detail view */}
         {modalAction && modalAction.type !== "reject" && (

@@ -96,7 +96,7 @@ export type SupplyBid = {
 
 // --- Helpers ---
 
-function makePipeline(activeIndex: number, rejected = false): PipelineStep[] {
+export function makePipeline(activeIndex: number, rejected = false): PipelineStep[] {
   const labels = ["Bid Submitted", "Negotiation", "Scheduling", "QA", "Finance", "GRN", "Routing", "Completed"]
   return labels.map((label, i) => ({
     label,
